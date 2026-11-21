@@ -1,12 +1,27 @@
 {
   "expo": {
-    "name": "Music Room",
-    "slug": "music-room",
+    "name": "Cuevo",
+    "slug": "cuevo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/logo.png",
+          "imageWidth": 160,
+          "resizeMode": "contain"
+        }
+      ],
+      "expo-font",
+      "expo-router",
+      "expo-video"
+    ],
     "ios": {
+      "bundleIdentifier": "com.cuevo.app",
       "supportsTablet": true
     },
     "android": {
@@ -20,6 +35,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "scheme": "cuevo"
   }
 }

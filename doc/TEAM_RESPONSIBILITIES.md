@@ -1,4 +1,4 @@
-# Music Room — team responsibilities
+# Cuevo — team responsibilities
 
 This document applies the agreed ownership split to `PROJECT_PLAN.md`. You lead the React Native mobile application and responsive web bonus, and contribute a bounded backend feature. Your teammate leads the backend and shared-state logic.
 

@@ -1,8 +1,14 @@
-# Music Room — two-person delivery plan
+# Cuevo — two-person delivery plan
 
 Source: `../en.subject.pdf`, version 6. Prepared 2026-11-15.
 
 Goal: deliver a complete mandatory project and all four proposed bonuses. This plan is a proposed implementation strategy; the subject and evaluation requirements remain authoritative.
+
+## Current delivery status — 2026-11-20
+
+Mobile UI and local session interactions are in progress. Illustrated welcome/three-step introduction, auth previews, Home, grouped universal search and song details, Rooms grid/search/filters, create room/playlist and six-box join, shared queue ranking/lifecycle, playlist editor/details, profiles, notifications, Settings and Help exist. Real auth, backend, music audio, realtime collaboration and bonuses are not complete. Mandatory acceptance boxes below remain unchecked.
+
+See [UI progress](UI_PROGRESS.md) and [session handoff](SESSION_HANDOFF.md) for current behavior, test evidence and remaining gaps. Settings privacy/server address are session preferences without API enforcement/consumption; password changes and social linking are not integrated. Playlist creation currently starts private, which must be reconciled with the subject's public/everyone-edit default before acceptance. Local queue rules do not complete the subject's invite/location/time eligibility requirements.
 
 ## 1. Scope and passing conditions
 
@@ -77,7 +83,7 @@ Goal: deliver a complete mandatory project and all four proposed bonuses. This p
 ## 3. Decisions and ambiguities to resolve early
 
 1. **Service count:** V.2 says at least two services, while V.7 refers to three. Confirm the discrepancy with the evaluator. The working scope is two.
-2. **Playback:** confirm the expected playback experience. Prototype real playback on a target phone before choosing a provider/framework combination.
+2. **Playback — decided:** host-only audio playback. The host phone plays music, optionally through a connected speaker; participant phones suggest tracks, vote, and display the authoritative queue/current-track state. No synchronized audio playback on participant phones. This is our implementation choice, not an explicit host-only requirement in the subject. Prototype provider playback on a target phone before choosing the final integration.
 3. **Provider feasibility:** verify search, authentication, playback restrictions, account requirements, and track-completion behavior using current official provider documentation.
 4. **Permissions:** interpret service “license management” as access rights; keep it separate from paid subscription entitlements.
 5. **Subscriptions:** the subject requires switching between offers but does not explicitly require real payment processing. Confirm expectations before adding billing.
@@ -108,7 +114,7 @@ Candidate stack: TypeScript, React Native for mobile, React for web, a Node back
 - Use REST for commands/queries and WebSockets for committed state updates.
 - Keep music-provider code behind an adapter.
 - Keep permissions, voting, ordering, and synchronization rules on the backend.
-- Start with one designated playback host per event, subject to provider feasibility and evaluation expectations.
+- Use one designated playback host per room/event. Only the host phone plays audio; participants control suggestions/votes and see synchronized session data. See `PLAYBACK_DECISION.md` for the agreed scope and unresolved host-disconnection behavior.
 - Share API types and suitable business-independent utilities between clients; do not assume all mobile UI or native features can run on web unchanged.
 - Avoid microservices for this team size and scope.
 
@@ -147,7 +153,7 @@ Use short branches, frequent integration, cross-review, and a shared issue board
 1. Prototype real music playback on a phone.
 2. Prototype social login and safe account linking.
 3. Spike BLE detection and identify required hardware.
-4. Decide permissions and playback model.
+4. Define permissions around the agreed host-only playback model.
 5. Define schema, API contracts, realtime events, and core screens.
 6. Add installation scripts, migrations, safe environment template, and CI.
 
@@ -266,3 +272,9 @@ An initial estimate is 8–10 full-time weeks for two people, subject to experie
 Suggested defense sequence: clean setup; account creation/verification/recovery/social linking; profile privacy; public/private playlists; concurrent editing; public/private events; voting eligibility; concurrent votes and playback; reconnect; responsive web; subscriptions; proximity detection; offline edits and conflict synchronization; measured capacity and architecture explanation.
 
 Both teammates must be able to explain why the backend is authoritative, how access rights are enforced, and how concurrent actions are resolved.
+
+## UI checkpoint and requirement discrepancy — 2026-11-21
+
+The mobile UI now includes discovery controls, actual queue covers, data-driven badges, Plus offer/payment/review pages, Settings saved-card summaries and two-second skeleton previews. These do not complete backend, payment or mandatory acceptance criteria.
+
+The user explicitly chose to list private rooms/playlists on Home regardless of membership, with lock icons on private items only. This differs from the subject requirement that private events be discoverable only by invited users. Preserve the requested prototype design, but resolve this discrepancy before mandatory acceptance and enforce resource access server-side. Card presence does not establish an access grant.

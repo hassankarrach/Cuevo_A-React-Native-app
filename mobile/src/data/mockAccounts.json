@@ -1,0 +1,204 @@
+{
+  "accounts": [
+    {
+      "id": "self",
+      "displayName": "Zero.jsx",
+      "username": "zerojsx",
+      "bio": "Your music. Your people.",
+      "location": "Casablanca",
+      "genres": [
+        "Pop",
+        "House"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#FFE1CD",
+      "verified": true,
+      "subscriptionActive": true
+    },
+    {
+      "id": "adam",
+      "displayName": "Adam",
+      "username": "adamgrooves",
+      "bio": "Disco records and kitchen dance floors.",
+      "location": "Rabat",
+      "genres": [
+        "House",
+        "Pop"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#FFE1CD",
+      "verified": false,
+      "subscriptionActive": false
+    },
+    {
+      "id": "sara",
+      "displayName": "Sara",
+      "username": "sarafterdark",
+      "bio": "Late nights, warm vocals.",
+      "location": "Casablanca",
+      "genres": [
+        "R&B",
+        "Jazz"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#F6DFA5",
+      "verified": true,
+      "subscriptionActive": true
+    },
+    {
+      "id": "yassine",
+      "displayName": "Yassine",
+      "username": "yassbeats",
+      "bio": "Always looking for the next beat.",
+      "location": "Tangier",
+      "genres": [
+        "Hip-hop",
+        "Afrobeats"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#DCE9DF",
+      "verified": false,
+      "subscriptionActive": false
+    },
+    {
+      "id": "lina",
+      "displayName": "Lina",
+      "username": "linawaves",
+      "bio": "Indie discoveries on repeat.",
+      "location": "Marrakech",
+      "genres": [
+        "Indie",
+        "Rock"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#E3E7F0",
+      "verified": false,
+      "subscriptionActive": false
+    },
+    {
+      "id": "omar",
+      "displayName": "Omar",
+      "username": "omarvinyl",
+      "bio": "Collecting songs, sharing good moods.",
+      "location": "Fes",
+      "genres": [
+        "Jazz",
+        "R&B"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#F3DCD3",
+      "verified": false,
+      "subscriptionActive": false
+    },
+    {
+      "id": "nora",
+      "displayName": "Nora",
+      "username": "noramix",
+      "bio": "A playlist for every moment.",
+      "location": "Rabat",
+      "genres": [
+        "Pop",
+        "Indie"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#E8DFD3",
+      "verified": false,
+      "subscriptionActive": false
+    },
+    {
+      "id": "amine",
+      "displayName": "Amine",
+      "username": "amineonrepeat",
+      "bio": "One more song before we go.",
+      "location": "Agadir",
+      "genres": [
+        "Pop",
+        "House"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#DFE9EB",
+      "verified": true,
+      "subscriptionActive": false
+    },
+    {
+      "id": "ines",
+      "displayName": "Ines",
+      "username": "inesoul",
+      "bio": "Soulful sounds and sunny afternoons.",
+      "location": "Essaouira",
+      "genres": [
+        "R&B",
+        "Afrobeats"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#EACFE0",
+      "verified": false,
+      "subscriptionActive": false
+    },
+    {
+      "id": "mehdi",
+      "displayName": "Mehdi",
+      "username": "mehdifm",
+      "bio": "From old classics to new favorites.",
+      "location": "Meknes",
+      "genres": [
+        "Rock",
+        "Hip-hop"
+      ],
+      "avatarUri": null,
+      "avatarColor": "#D5DAB5",
+      "verified": false,
+      "subscriptionActive": false
+    }
+  ],
+  "rooms": {
+    "kitchen-disco": {
+      "hostId": "self",
+      "role": "host",
+      "participantIds": [
+        "self",
+        "adam",
+        "sara",
+        "yassine",
+        "lina",
+        "omar",
+        "nora"
+      ]
+    },
+    "late-nights": {
+      "hostId": "sara",
+      "role": "participant",
+      "participantIds": [
+        "sara",
+        "self",
+        "omar",
+        "ines",
+        "mehdi",
+        "nora"
+      ]
+    },
+    "on-repeat": {
+      "hostId": "amine",
+      "role": "visitor",
+      "participantIds": [
+        "amine",
+        "adam",
+        "lina",
+        "yassine",
+        "ines"
+      ]
+    },
+    "after-hours": {
+      "name": "After Hours",
+      "visibility": "private",
+      "genre": "R&B \u00b7 Soul",
+      "hostId": "sara",
+      "role": "visitor",
+      "participantIds": [
+        "sara",
+        "omar",
+        "ines"
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+# CIH Sayidati card cover
+
+- Asset: `cih-sayidati-cover.png` (1610 × 977 pixels).
+- Source: user-supplied CIH BANK Sayidati card reference, edited using the built-in image generation tool, 2026-11-20.
+- Clean artwork retains CIH BANK and Arabic/Latin Sayidati branding. Sample numbers, expiry, cardholder name, chip and Mastercard logo were removed from the bitmap. The app draws the chip, contactless symbol, Mastercard circles and live masked details separately.
+- Rendered edge-to-edge within the existing payment preview: unchanged 1.65 aspect ratio, minimum height 190, radius 26. Source aspect differs by under 0.1%; stretch mode matches the existing container without cropping branding.
+
+## Final image-edit prompt
+
+Use case: precise-object-edit. Edit target: the most recent attached CIH BANK Sayidati payment card image, white upper half and pink/magenta/purple floral lower half. Create a clean high-resolution flat front-facing card cover texture for a mobile card preview. Preserve the reference floral artwork, flowing fine pink lines, color layout and bank/product branding faithfully. Keep the original CIH BANK logo at top left and Sayidati wordmark at top right with Arabic سيدتي and Latin SAYIDATI exactly as in the reference. Remove ALL personal/financial sample printing: all embossed card numbers, small numbers, expiry date, cardholder name, and the entire Mastercard red/orange overlapping circles/logo. Seamlessly reconstruct the original floral background under all removed elements. Remove the chip too, leaving uninterrupted background there, because a chip will be drawn separately by the app. No additional text, logos or symbols. Artwork only, no phone/mockup, no shadows, no perspective, no margins. Full-bleed rectangular image with square outer corners (the app clips rounded corners). Final canvas 1584 x 960 pixels, aspect ratio exactly 1.65:1 matching the existing card preview; adapt the reference edges minimally without distorting logos. Sharp clean logo/text edges, no pixelation. Keep generous clear space along the lower quarter for live card number and cardholder overlays.

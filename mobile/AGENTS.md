@@ -1,5 +1,9 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Learning workflow
+
+Read and follow `../doc/LEARNING_NOTES.md` before making changes. The user knows React for the web and wants to learn React Native through small, explained UI changes. Build one piece at a time, avoid implementing all application logic at once, and keep that note updated with concepts introduced.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:

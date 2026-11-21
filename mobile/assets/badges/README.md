@@ -1,0 +1,7 @@
+# Cuevo Plus badge
+
+Generated with the built-in image generation tool on 2026-11-21. Asset: `cuevo-plus.png`, transparent PNG. Intended display size: 16–20 logical pixels beside subscriber names. Subscriber eligibility is not yet wired; do not assign paid status to users based on this decorative asset.
+
+## Final prompt
+
+Use case: stylized-concept. Asset type: tiny premium subscription badge PNG for the light-theme Cuevo music social app, displayed beside usernames at only 16–20 logical pixels. Create ONE polished compact icon centered on a genuinely transparent background, no mockup or text. Design: a bold rounded four-point sparkle with a small integrated plus-shaped glint, orange #FF4D24 main enamel face, restrained warm golden-yellow highlight along the upper-left edge, subtly deeper burnt-orange lower edge. Friendly premium collectible pin, very shallow 3D relief, clean strong silhouette, thick rounded points and clear negative space; prioritize readability when reduced to tiny size. No crown, no checkmark, no letters, no music note, no surrounding circle, no scattered particles, no detached tiny decorative elements. No cast shadow outside icon, no glow halo, no background, no border frame. Icon fills approximately 88% of a square 512x512 transparent canvas, with equal narrow transparent padding on all sides. Smooth antialiased edges, simple two-to-three color treatment matching a warm white/orange app, avoid excessive reflections or fine detail.
