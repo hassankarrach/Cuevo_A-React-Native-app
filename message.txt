@@ -1,0 +1,57 @@
+hello there, my name is ChatGpt the agent responsible for the frontend part.
+
+This message is for you and your AI agent so we can coordinate Cuevo’s backend with the frontend already built.
+
+The mobile app uses React Native with Expo. Most screens exist, but their data and actions currently use local session state. We should replace that state progressively with your API.
+
+I propose four backend phases:
+1. Foundation and authentication: database, API conventions, accounts, sessions, email verification and password recovery.
+2. Playlists and collaboration: song catalog/search, playlist CRUD, invitations, permissions, concurrent editing and realtime updates.
+3. Rooms and voting: room creation/discovery, invitations/codes, membership, song suggestions, voting policies, queue ranking and playback-state coordination.
+4. Integration and hardening: complete client integration, reconnect/error handling, security checks, logs, tests, load testing and setup documentation.
+Please start with Phase 1, with the following scope.
+
+Backend foundation
+
+Set up the backend application, persistent database, migrations and environment configuration. Please confirm your chosen stack rather than assuming we have already agreed on one.
+
+Provide a health endpoint and reproducible startup instructions. The mobile app already has a server-address setting; we will connect it to the API client during integration.
+
+Define consistent API conventions: base path/version, identifiers, date format, validation errors, pagination and authentication. Please document these in OpenAPI or an equivalent API reference.
+
+Authentication matching the existing screens
+
+Our frontend flow is:
+
+Welcome → Sign up → Verify email → Set up profile → Introduction → Home
+
+We also have:
+- Email/password login and logout.
+- Resending an email-verification code.
+- Forgot password → reset code + new password → confirmation.
+- Change password from Settings.
+- Google sign-in buttons and a linked-accounts section, which are not connected yet.
+Please implement registration, login, authenticated-user lookup, session renewal, logout, verification/resend and password-reset endpoints. Agree the code format, expiry, resend cooldown and validation rules with us before finalizing them.
+
+Verification and reset must be checked by the server. Please include expired-code, invalid-code, duplicate-email, invalid-credentials and expired-session responses, with stable error codes the frontend can translate into useful messages. Passwords must be securely hashed, and authentication/code endpoints rate-limited.
+
+For Google sign-in, please define the client/server token exchange and implement server-side identity verification. We will handle the native client integration. Linking a provider to an existing account must be an explicit, authenticated operation.
+
+Profile integration and ownership
+
+The profile setup already collects a display name and photo. Our shared profile model also includes username, bio, location and preferred genres.
+
+Please coordinate the user/profile relationship, identifier format and photo-upload contract with us. Under our existing responsibility split, the frontend developer contributes the profiles and friendships backend feature, with your review. Please establish the authentication/database conventions that feature should reuse rather than independently duplicating it.
+
+What we need back from Phase 1
+
+Please provide:
+- Runnable backend, migrations and a safe example environment file.
+- Documented endpoints with example request/response bodies.
+- The session/token contract and client storage expectations.
+- Email-delivery setup, including a documented local-development option.
+- Automated checks covering successful flows, invalid/expired codes, unauthorized access and session renewal/revocation.
+- A test account or reproducible account-creation procedure.
+Phase 1 is ready for frontend integration when we can register, verify an email, log in, retrieve the authenticated user, renew a session, reset a password and log out against the running backend.
+
+Please flag any mismatch with the existing frontend before changing the flow. Endpoint names are yours to propose; we mainly need a stable, documented contract.
