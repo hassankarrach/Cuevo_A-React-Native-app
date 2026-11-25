@@ -5,6 +5,11 @@ from app.db.session import get_db_engine
 from app.main import create_app
 
 
+TEST_DATABASE_URL = (
+    "postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_test"
+)
+
+
 class ReadyConnection:
     def __enter__(self) -> "ReadyConnection":
         return self
@@ -23,14 +28,16 @@ class ReadyEngine:
 
 class UnavailableEngine:
     def connect(self) -> ReadyConnection:
-        raise ConnectionError("database unavailable")
+        raise ConnectionError("database unavailable: sensitive-test-password")
 
 
 def test_app_starts_and_health_is_ready() -> None:
     settings = Settings(
         environment="test",
-        database_url="postgresql+psycopg://cuevo:local@localhost:5432/cuevo_test",
-        test_database_url="postgresql+psycopg://cuevo:local@localhost:5432/cuevo_test",
+        database_url=(
+            "postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_dev"
+        ),
+        test_database_url=TEST_DATABASE_URL,
         _env_file=None,
     )
     app = create_app(settings)
@@ -51,7 +58,10 @@ def test_health_returns_503_when_database_is_unavailable() -> None:
     app = create_app(
         Settings(
             environment="test",
-            database_url="postgresql+psycopg://cuevo:local@localhost:5432/cuevo_test",
+            database_url=(
+                "postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_dev"
+            ),
+            test_database_url=TEST_DATABASE_URL,
             _env_file=None,
         )
     )
@@ -62,3 +72,4 @@ def test_health_returns_503_when_database_is_unavailable() -> None:
 
     assert response.status_code == 503
     assert response.json()["database"] == "unavailable"
+    assert "sensitive-test-password" not in response.text

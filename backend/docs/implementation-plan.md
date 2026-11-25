@@ -1,1258 +1,426 @@
 # Cuevo Backend Implementation Plan
 
-## 1. Brief findings
+## 1. Findings and review scope
 
 ### Project context
 
-- **Specified:** the project is named *Music Room* in `en.subject.pdf`; Version 6 describes a mobile, connected, collaborative music application.
-- **Agreed:** the repository project is **Cuevo**. The React Native frontend uses Expo and is developed separately. The team has two people and owns the backend. This plan uses Cuevo in repository-facing text.
-- **Specified:** the backend is the authoritative source of truth for service data (`en.subject.pdf`, section V.3, PDF page 10).
-- **Specified:** the mobile application is a remote control for the backend and must support a configurable backend address (`en.subject.pdf`, section V.5, PDF page 10).
-- **Specified:** Android or iOS is acceptable for the mobile client. The frontend message says Expo/React Native on iOS currently; this does not itself establish backend platform support (`message.txt`, line 3).
-- **Specified:** at least two of Music Track Vote, Music Control Delegation, and Music Playlist Editor must be implemented (`en.subject.pdf`, section V.2, PDF page 8).
-- **Specified:** the bonus topics are evaluated only after all mandatory requirements work and work correctly (`en.subject.pdf`, Chapter VI, PDF page 13).
+- **Specified:** The official subject is *Music Room*, Version 6. It describes a mobile, connected and collaborative music application. The repository and team handoff call the product **Cuevo**. Use Cuevo in the repository and API title, and note the Music Room subject name where traceability is useful.
+- **Agreed:** The frontend is React Native + Expo; the handoff selects iOS as the first mandatory target. The current global README describes a mobile UI with mock/local state, not an integrated production client.
+- **Agreed:** The backend is the authoritative source for accounts, permissions, memberships, votes, ordering, revisions, entitlements and playback state. Keep backend delivery separate from mobile API wiring and screen redesign.
+- **Agreed:** The two selected mandatory services are **Music Track Vote** and **Music Playlist Editor**. **Music Control Delegation** is deferred, subject to the evaluation ambiguity in the open-decision register.
+- **Agreed:** Host-only playback: the host phone plays audio, optionally through a speaker; participant phones do not play synchronized audio.
+- **Agreed:** The backend is a single service used by the mobile application and, if selected later, a responsive web client. Do not create a second backend.
+- **Current UI (handoff-reported):** Authentication/onboarding, profiles, playlist editing, rooms, queue/voting, playback controls, notifications, Plus previews, offline playlist snapshots and simulated nearby discovery are represented in the client. The handoff explicitly says these are not proof of backend behavior.
+- **Repository state reviewed:** The checked-out branch is `backend` at `94c4f03`, following foundation commit `2cb0adf`. The existing backend contains FastAPI startup, PostgreSQL configuration, SQLAlchemy, Alembic, `/health`, and six unit/API tests; no account or product-domain APIs/models are present. The current checkout has no `mobile/` directory, so client details below are grounded in the handoff and global README, not direct inspection of mobile source.
+- **Source-state caveat:** `BACKEND_TEAMMATE_HANDOFF.md` is present in the worktree as an untracked file and says it was prepared 2026-11-24; it supersedes `message.txt` where more specific. It states the foundation was merged into `main` as `bdf89d1`, but the checked-out branch history observed here instead shows `2cb0adf` and `94c4f03`. Do not infer branch ancestry from that handoff statement; confirm Git history before any merge-related work.
+- **Existing foundation verification:** The handoff reports six tests passed on Python 3.12 and migration SQL generation passed, but live PostgreSQL/migration execution was not verified because Docker was unavailable at that time. This planning task did not rerun tests. The backend README says Python 3.11+ while the handoff recommends Python 3.12 and reports pinned dependencies did not install on Python 3.14; verify and document the supported version.
 
-### Reviewed sources
+### Sources reviewed
 
-| Source | Result |
-|---|---|
-| `en.subject.pdf` | Read from PDF text. Key requirements are located in Chapters III-VII and PDF pages 5-14. |
-| `message.txt` | Read. It defines four proposed frontend/backend phases and a detailed Phase 1 frontend contract to coordinate. |
-| `README.md` | Read. It describes Cuevo UI progress and local Expo setup, but contains no existing backend implementation or backend API contract. |
-| `backend/README.md` | Exists but is empty. |
-| Repository state | `backend` branch is checked out. `git ls-files` is empty; the backend directory is otherwise untracked scaffold, and no application code, migrations, dependencies, or tests are present. |
+1. [`en.subject.pdf`](../../en.subject.pdf), Version 6: Objectives; IV.1–IV.2; V.1–V.8; VI.1–VI.4; VII. Relevant page/section citations are used below.
+2. [`BACKEND_TEAMMATE_HANDOFF.md`](../../BACKEND_TEAMMATE_HANDOFF.md), prepared 2026-11-24: especially §§1–15. Its status labels (**Agreed**, **Current UI**, **Proposed**, **Open**) are retained.
+3. [`message.txt`](../../message.txt): initial frontend phases and authentication/profile ownership requests; superseded by the handoff where more specific.
+4. [`README.md`](../../README.md): project purpose, current mock/local UI scope, mobile setup and documentation links.
+5. [`backend/README.md`](../README.md), [`backend/pyproject.toml`](../pyproject.toml), [`backend/requirements.txt`](../requirements.txt), [`backend/requirements-dev.txt`](../requirements-dev.txt), [`backend/.env.example`](../.env.example), the current app/database/migration modules and `backend/tests/`: current foundation and setup conventions.
 
-**Naming:** use *Cuevo* for repository documentation and state that the official subject calls the product *Music Room*.
+The requested `backend/docs/implementation-plan.md` had been deleted in the worktree before this task. The user explicitly approved recreating that exact path. No application code, dependency manifest, migration, or other source document was changed for this plan.
 
-**Limitations:** this branch has no frontend source or backend source contract to inspect. The PDF and team message are therefore the primary evidence. The plan does not claim that the frontend endpoints, identifier formats, or profile UI payloads exist beyond `message.txt`.
+### Responsibility boundaries
 
-## 2. Open decisions register
+- **Backend teammate:** infrastructure, API/authentication, email/provider verification, catalog, playlist and room services, voting/playback state, realtime, server entitlements, synchronization APIs, proximity lookup, security, logs, tests, CI and measured performance evidence.
+- **Frontend developer:** mobile screens/navigation, native provider integration, client credential storage, API/realtime integration, offline client, proximity detection and later web client.
+- **Agreed handoff exception:** The frontend developer contributes the **profiles/friendships backend feature**, with backend teammate review. First agree account IDs, authentication dependencies, database conventions and migration ownership; do not create competing profile/friend models.
+- **Shared:** API/error/event contracts, policy decisions, provider and playback choices, acceptance demonstrations, and later real-client integration testing.
 
-| ID | Decision | Position(s) | Impact | Severity | Suggested owner/action |
-|---|---|---|---|---|---|
-| OD-1 | Which two service functions satisfy V.2 | The subject requires at least two; it does not select which pair. The README and message describe playlist, room/voting, and delegation UI broadly. | Choosing fewer than all three can leave UI or evaluation gaps. | High | Backend/frontend agree whether to implement all three or explicitly select two before service feature sequencing. |
-| OD-2 | Session/token contract | `message.txt` requests sessions, renewal and revocation; `en.subject.pdf` requires authentication but does not define token format. The proposed stack says JWT-based authentication, while storage and expiry rules are not given. | Affects mobile storage, logout, session theft controls and renew/revoke APIs. | High blocker for Phase 1 | Backend proposes; frontend confirms storage and renewal behaviour. |
-| OD-3 | Verification/reset code contract | `message.txt` requires server validation but does not state code format, expiry or resend cooldown. | Blocks endpoint examples and test thresholds. | High blocker for Phase 1 | Backend proposes; frontend approves before implementation. |
-| OD-4 | Profile/identifier/photo contract | `message.txt` asks for coordination on user/profile relationship, identifier format and photo upload. | Blocks profile API and photo implementation. | High | Backend and frontend agree a minimal profile schema and identifier format. |
-| OD-5 | Profile/friendship ownership | `message.txt` says the frontend developer will contribute the profiles and friendships backend feature with backend review. | Duplicate models/APIs or ownership ambiguity may result. | Medium | Create shared conventions, then assign one implementation owner. |
-| OD-6 | Google identity exchange | The subject requires social registration/linking; `message.txt` requires server identity verification but not a native SDK flow or provider audience. | Blocks provider linking and test fixtures. | High before provider work | Backend and frontend select a credential/token exchange and configure provider identifiers locally. |
-| OD-7 | Event location/time and license rules | The subject gives a 4-6 PM example and requires location/time voting policy, but no exact radius, timezone or schedule contract is stated. | Cannot safely define policy fields or authorization. | High for room voting | Frontend/backend agree timezone, location source, radius and schedule shape. |
-| OD-8 | Licenses and paid subscriptions | The subject requires license concepts for track voting, delegation and playlist editing. Subscription UI is bonus and no pricing or entitlement catalogue is given. | Entitlement logic cannot be finalized. | High for licensing; deferred for bonus | Define separate feature entitlements and invite/location policy inputs. Keep subscription products and payment provider unresolved. |
-| OD-9 | Music catalog source | The subject does not define a provider or track identifier. `message.txt` asks for song catalog/search. | Blocks catalog/search implementation. | Medium | Decide whether the catalog is seeded, imported or provider-backed before catalog APIs. |
-| OD-10 | Real-time transport details | WebSockets are proposed and the subject requires concurrent editing, but event names, ordering and reconnection semantics are unresolved. | Race and stale-state behaviour may differ across clients. | High for collaboration | Agree versioning, event envelope, room/playlist authorization and reconnection policy. |
-| OD-11 | Music playback authority | The subject has live queues and delegation, while host-only playback is mentioned in README as an existing UI decision. | It is unclear whether playback state is server-authoritative or client-controlled. | High for rooms/delegation | Verify and document the host-only playback decision before implementation. |
-| OD-12 | Offline synchronization conflict policy | The subject leaves this bonus open and warns of stale data and concurrency conflicts. | Offline semantics could change data loss risk. | Medium; defer until mandatory completion | Define sync version/vector and conflict winner only if offline work is approved. |
+## 2. Requirement inventory and traceability
 
-## 3. Architecture and stack rationale
+“Feature” references point to the ordered prompts in §7. Classification is the subject/handoff classification, not a claim that the backend already implements it.
 
-### Proposed stack
+| ID | Source and location | Requirement | Class / owner | Planned feature(s) and acceptance evidence |
+|---|---|---|---|---|
+| R-01 | Subject V.1, p.7; handoff §§7, 14 | Account creation with email/password or social account; validate email for password accounts; forgotten-password flow; link a social account; persist public, friends-only and private profile information and music preferences. | Mandatory / shared | F02–F04; server-driven registration, verification, recovery, identity linking and privacy tests. Facebook-vs-Google scope remains open (D-02). |
+| R-02 | Subject V.2, p.8; handoff §§2, 15 | Deliver at least two of Music Track Vote, Music Playlist Editor and Music Control Delegation. The handoff selects Track Vote + Playlist Editor and defers Delegation. | Mandatory scope / team + evaluator | F07–F10 implement the selected two. V.7's three-service load-test wording remains unresolved (D-01); do not silently add Delegation. |
+| R-03 | Subject V.2.1, p.8; handoff §§9, 10 | Suggest or vote for next tracks; higher vote ranking plays earlier; public/private event visibility; default public and everyone can vote; license-enabled invited-only or location/time voting; handle competition/concurrent votes. | Mandatory / backend + shared policy | F05, F08–F10; concurrent-vote tests, deterministic ranking and access-policy tests. Specific vote/location rules remain open (D-06). |
+| R-04 | Subject V.2.2, p.9; handoff §§2, 14 | Music-control delegation has per-device license and lets users delegate control to friends. | One of the three named services; deferred by team | Not in selected mandatory implementation. Confirm with evaluator because V.7 refers to three services (D-01). |
+| R-05 | Subject V.2.3, p.9; handoff §§8, 10 | Real-time collaborative playlists; public by default and accessible to every user; private playlists accessible only to invited users; everyone may edit by default, with an invited-only edit option under the relevant license; handle competing edits. | Mandatory / backend + shared | F07; privacy, permissions, invitation, atomic revisioned edit, concurrency and reconnect tests. Current UI's private default conflicts with the subject (D-05). |
+| R-06 | Subject V.3, p.10 | Backend stores service data and is the reference/source of truth. | Mandatory / backend | F02–F11; persistence, transaction and authorization tests; client state never overrides server truth. |
+| R-07 | Subject V.4, p.10; handoff §§6, 10–11 | Document API methods, inputs and outputs; justify an API style; use/justify REST and JSON or an alternative. | Mandatory / backend + shared | F01 and each feature's OpenAPI updates; documented examples, stable errors and contract review. |
+| R-08 | Subject V.5, p.10; handoff §§2–4 | Mobile clients act as remote controls; server address is configurable; social authentication is supported in the mobile application. | Mandatory / shared | Backend API support in F01–F03; client wiring is explicitly a later frontend task, not part of backend prompts. |
+| R-09 | Subject V.6, p.11; handoff §13 | Protect user data from cross-account access and plan for brute force/session theft; identify practical protections. | Mandatory security / backend | F02–F11; object-level authorization, abuse, replay, privacy and redaction tests plus documented threat controls. |
+| R-10 | Subject V.6, p.11; handoff §13 | Each mobile action generates backend logs containing platform, device and app version. | Mandatory operational / backend + frontend | F11; authenticated, bounded action ingestion and coverage evidence; client metadata is untrusted and secrets are redacted. |
+| R-11 | Subject V.7, p.11; handoff §§13, 14–15 | Measure the number of simultaneous users supported by the services and record server characteristics. | Mandatory operational / backend | F11; reproducible load plan/results with environment, concurrency, duration, dataset, throughput, latency, errors, CPU/RAM and topology. Service-count ambiguity D-01 must be recorded. |
+| R-12 | Subject V.8, p.11; handoff §13 | Work iteratively, test layers, integrate continuously, keep credentials/API keys/environment values out of Git. | Mandatory quality/security / backend | F00, F01, F11 and every feature prompt; CI, isolated tests, safe env templates, exact verified commands. |
+| R-13 | Subject VI.1, p.12; handoff §§2, 12 | Bonus: make the service available as a responsive web application after the mobile service/API. | Bonus / frontend-led, backend support | B04 only after all mandatory requirements pass; use same API and authorization, then approve browser-origin/auth/CSRF behavior. |
+| R-14 | Subject VI.2, p.12; handoff §12 | Bonus reflection on IoT; an iBeacon-like mechanism is an example of discovering nearby public events. | Bonus / shared | B03: first document feasibility/risks; implement lookup only if team elects it. Proximity never grants access to a private room. |
+| R-15 | Subject VI.3, p.12; handoff §12 | Bonus: define free/paid offers and let users switch; some functionality may be paid-only. | Bonus / shared | B01 after mandatory acceptance and D-03 decision; persisted server entitlements, no real billing without explicit provider/product approval. |
+| R-16 | Subject VI.4, pp.12–13; handoff §12 | Bonus: offline experience and synchronization, including conflicts/concurrency and obsolete client data. | Bonus / shared | B02 after mandatory acceptance; versioned, authorized and idempotent sync only after cache/write/conflict policy is approved. |
+| R-17 | Handoff §§4, 10, 13–15; global README | Existing UI calls for profiles/search, invitations, in-app notifications, avatar, catalog, playlist/room discovery and setup/demo procedures. | Agreed integration scope / shared | F04–F08, F11; endpoint capability and demo acceptance. Handoff-reported UI types are not final backend schemas. |
+| R-18 | Handoff §§2, 9, 11 | Host phone alone plays audio; WebSockets/REST are the transport direction; event schemas and playback provider are not finalized. | Agreed direction + open implementation detail / shared | F01, F07–F10; commit-before-broadcast and reconnect/resync tests; provider and host-failure decisions remain open (D-08). |
+| R-19 | Handoff §§3, 10, 12, 14 | Optional native push is distinct from OS permission and in-app notification state. | Optional, not in subject bonus list / shared | Not planned as a required feature. Add only after team explicitly chooses provider, token lifecycle and consent contract. |
 
-| Choice | Responsibility | Assessment |
+### Mandatory vs. bonus gate
+
+The subject states bonus work is assessed only when the mandatory part is “PERFECT,” meaning all mandatory requirements are complete and work without malfunctioning (VI.4, p.13). Therefore B01–B04 are **gated and sequenced after mandatory acceptance**, not parallel MVP work. Preparatory UI, a simulated nearby result, an entitlement field, or an offline snapshot alone does not count as a completed bonus.
+
+## 3. Open decisions and conflicts
+
+Resolve the blocker items before finalizing affected contracts. The plan records proposals as proposals; no unresolved rule below is treated as settled.
+
+| ID / severity | Positions and source | Impact | Owner / next action |
+|---|---|---|---|
+| **D-01 — Blocker for final scope/evaluation** | Subject V.2 (p.8) requires **at least two of three** services; subject V.7 (p.11) says measure simultaneous users using **three services**. Handoff §2 selects Track Vote + Playlist Editor and explicitly defers Music Control Delegation. | Could require a third service for evaluation/load tests even though two satisfy V.2. | Team asks evaluator whether the third service must be implemented or merely considered. Keep Delegation out of the committed roadmap until answered; report the tested service count accurately. |
+| **D-02 — Blocker for social-auth completeness** | Subject V.1 (p.7) names Facebook or Google for registration/linking. `message.txt` and handoff §§4, 7 emphasize Google; current checkout has no mobile source to confirm provider buttons/configuration. | Google-only may not satisfy the intended provider requirement; exact number of providers is ambiguous. | Team/evaluator confirms Google-only versus both Google and Facebook. Implement only an approved provider set; never trust a client profile/token without server verification. |
+| **D-03 — Blocker for subscription bonus only** | Subject VI.3 (p.12) says some features, “Music Playlist Editor for instance,” may be paid-only. Handoff §§2, 12 says mandatory defaults must remain usable and not be put behind an arbitrary paywall. | A subscription gate could make the selected mandatory playlist service inaccessible on Free, conflicting with the handoff's scope and the bonus assessment gate. | Product/evaluator explicitly decides whether paid-only gating applies to any mandatory feature. Until then, do not enforce a paywall on mandatory acceptance paths. |
+| **D-04 — High: responsibility/migration ownership** | User context says the team owns backend while frontend is separate; handoff §3 assigns the frontend developer a contribution to profile/friendship backend with backend review. | Unclear who authors/merges profile migrations and resolves model conflicts. | Team confirms named implementer/reviewer, shared account model and migration ownership before F04; retain the handoff split unless changed explicitly. |
+| **D-05 — High: playlist default mismatch** | Subject V.2.3 (p.9): public by default; every user can access; everyone can edit by default. Handoff §8 reports the current create UI defaults `private: true`. | API and UI defaults would produce different behavior; a private mock fixture must not weaken production privacy. | Backend implements the subject defaults; frontend owner schedules UI adapter/default correction during later integration. Confirm whether owner-only editing is retained as an extra option and how it relates to the licensed invited-only rule. |
+| **D-06 — High: room and vote eligibility** | Subject V.2.1 (p.8): public events are discoverable and votable by all; private events are only findable/votable by invited users; default everyone can vote; license may restrict to invited or a specific place/time. Handoff §9 says current visitor actions are rejected and whether public users must explicitly join is open. | Visibility and voting eligibility could be conflated, wrongly deny public votes, or expose private room existence. Location/time additionally needs trusted-enough evidence and policy values. | Frontend/product reviews a policy matrix: public/private discovery, join/member state, vote eligibility, invited-only, location/time and license. Define geo radius/window, timezone, location age/accuracy, denied permission and spoofing limits before enabling that policy. |
+| **D-07 — High: vote and playlist concurrency semantics** | Subject requires competition handling (V.2.1 and V.2.3); handoff §§8–9 proposes vote values `-1/0/1`, one vote per user/entry, descending net score then insertion order, duplicate track prevention, stable entry IDs and expected revisions, but marks several details proposed. | Ranking, repeat votes, reorder conflicts, duplicates, played-track resuggest, deletion and retries affect persisted state and clients. | Approve exact initial rules and error/retry behavior before OpenAPI freeze. Handoff proposals are sensible defaults for review, not silently finalized requirements. |
+| **D-08 — High: playback provider and host failure** | Handoff §§2, 9, 14 agrees host-only audio, but provider/SDK, playable IDs, host disconnect/transfer, completion semantics and failure recovery are open. Catalog artwork metadata is not playable audio. | Cannot claim functional playback or complete end-to-end Track Vote without a provider contract and real-phone proof. | Frontend/backend jointly prototype provider playback on a real phone; agree host absence, idempotent completion/skip, resume/end/restart semantics. Keep participant audio out of scope. |
+| **D-09 — High: identity/profile details** | Handoff §§7, 14 leaves username normalization/change/lengths, badge meaning, avatar storage/upload and friendship edge cases open. `message.txt` asks to coordinate the relationship and photo contract. | Schema and privacy behavior affect authentication, account uniqueness, profile display and client upload handling. | Profile owner + backend agree IDs, field limits, username rules, `public|friends|private` filtering, friendship request transitions, badge meaning and avatar storage/URL lifecycle before F04 migrations. |
+| **D-10 — High: authentication policy** | `message.txt` asks to agree code format/expiry/cooldown; handoff §7 treats six digits/15 minutes/30 seconds as UI facts/proposals, not backend rules. Token lifetimes, refresh rotation/reuse, email delivery and password byte/Unicode validation remain open. | Security and frontend renewal/error UX depend on these policies. | Backend proposes numeric code, expiry, attempt limits, resend cooldown, rate limits, email adapter, JWT access lifetime and database-backed refresh rotation/reuse policy; frontend/team approve before final contract. Reset request must remain non-enumerating. |
+| **D-11 — Medium: API/session transport** | Handoff §§6, 14 proposes `/api/v1`, camelCase, opaque IDs, UTC RFC 3339, cursor pagination, a common error envelope, revisions/idempotency IDs, JWT access plus rotating refresh session; not yet agreed. | Contract changes affect every route and the native client; cookie vs. bearer transport also affects later browser support. | Freeze an OpenAPI contract and error/status catalog in F01. Choose native transport now; make a separate browser cookie/CORS/CSRF decision before B04. |
+| **D-12 — Medium: metadata source and catalog authority** | Handoff §5 reports 40 client fixtures with Apple iTunes metadata/artwork references, not playable assets; current backend checkout lacks the `mobile/` catalog files. | Do not fabricate seed records, assume rights to copy data, or confuse a metadata provider ID with an internal song ID or playable asset. | Agree licensed/importable metadata source, attribution/refresh policy and provider mapping. Obtain the actual catalog artifact from the frontend branch if it is to seed the backend. |
+| **D-13 — Medium: API/setup support matrix** | Backend README says Python 3.11+; handoff §1 says pins were verified on Python 3.12 and did not install on 3.14. Live DB tests were not verified in the prior setup. | Clean-clone reproducibility and migration/test evidence are not established across the stated range. | F00 validates a supported Python version and PostgreSQL migration path; update docs based on actual results and never claim an untested support range. |
+| **D-14 — Medium: offline scope** | Subject VI.4 (pp.12–13) requires planning synchronization/conflict/obsolete data but lets offline behavior differ; handoff §12 reports snapshots only, with pending edits and reconciliation undecided. | Read-only cache and offline edits require different API and data-loss guarantees. | Before B02, decide cached data, allowed offline actions, logout/account-switch cleanup, write queue, revision base, idempotency retention and conflict UX. |
+| **D-15 — Medium: subscriptions/payment** | Handoff §12 says Plus is shown as 99 DH in current UI, but this is not approved pricing/currency/tax/benefit policy and no payment provider or real charging is selected. | Entitlement rules can be tested without payment, but production purchase/refund cannot be designed accurately yet. | Decide offers, currency/units, periods, benefits, effective dates/downgrade and whether real billing is in scope. Never store raw card data; do not treat session-only masked summaries as payments. |
+| **D-16 — Medium: nearby/IoT details** | Subject VI.2 (p.12) suggests iBeacon-like nearby discovery; handoff §12 describes a phone/Mac identifier but leaves format, rotation, owner control and native device behavior open. | A simulated result is not real proximity; a beacon must not bypass private-room authorization. | Do reflection/feasibility first. If selected, agree identifier ownership/rotation, lookup limits, room privacy, native detection and real-device test criteria. |
+| **D-17 — Medium: load-test target** | Subject V.7 refers to three services; handoff §13 recommends realistic tests for the two selected services and detailed host/environment evidence. No deployment topology or target capacity is specified. | Any numeric capacity claim without a test setup would be invented. | Resolve D-01, select a documented host/topology and test duration/dataset/concurrency; report measured throughput/latency/errors and resource use, not a promised capacity. |
+| **D-18 — Low / optional scope** | Handoff §§4, 10, 14 mentions OS push registration/delivery as optional; the subject does not require push notifications. | Adding provider infrastructure and device credentials expands scope unnecessarily. | Defer push unless separately approved. In-app notification state and OS permission are not push delivery. |
+
+## 4. Architecture and stack rationale
+
+The proposal is to continue the simple modular FastAPI/PostgreSQL backend already present. The stack is an existing implementation direction and a user proposal, not a reason to add unneeded infrastructure.
+
+| Choice | Status and responsibility | Fit and trade-offs |
 |---|---|---|
-| FastAPI | REST API, OpenAPI, WebSocket endpoints and dependency injection | **Recommended.** Suitable for Python APIs and asynchronous WebSocket support. It needs team confirmation based on experience. |
-| PostgreSQL | Authoritative relational data | **Recommended** for users, profiles, memberships, playlists, rooms, queues and transactional entitlement checks. |
-| SQLAlchemy | ORM and persistence abstractions | **Recommended** if the team accepts the ORM and migration workflow; alternatives should not be added solely for variety. |
-| Alembic | Schema migrations and upgrade history | **Required** with SQLAlchemy for reproducible PostgreSQL changes. |
-| WebSockets | Realtime playlist/room updates | **Recommended** for the stated collaboration requirements; the implementation must be tested against reconnection and stale-state cases. |
-| JWT authentication | Mobile authentication | **Recommended as a proposal, not a settled contract.** Access/refresh or opaque refresh-session details must be agreed with the frontend. |
-| Pytest | Unit and integration testing | **Recommended** and suitable for FastAPI/SQLAlchemy projects. |
-
-No Redis, message broker, cache, background-job system, extra database, microservice or orchestration platform is proposed for the mandatory baseline. If a later load test demonstrates a need, introduce only the smallest justified component.
-
-### Logical architecture
-
-The proposed boundaries are:
-
-1. **API layer:** versioned HTTP routes and WebSocket handlers; request validation and stable error responses.
-2. **Domain/services:** account lifecycle, authorization, visibility, entitlements, playlist operations, room queues and vote ranking.
-3. **Persistence/repositories:** SQLAlchemy models and explicit database transactions for state changes and concurrency-sensitive updates.
-4. **Infrastructure:** PostgreSQL, email delivery adapter, provider identity verification and configuration.
-
-Backend-authoritative state should include accounts, credentials, verification/recovery state, identities, profiles, memberships, invitations, playlists, tracks, rooms, queues, votes, licenses/entitlements and audit events. Mobile state is disposable UI state and must not be treated as permission or ranking authority.
-
-### Proposed API conventions
-
-The following are proposals only, pending `OD-2`, `OD-3`, `OD-4`, and frontend review:
-
-- Base path: `/api/v1`.
-- JSON request/response bodies and RFC 3339 UTC timestamps.
-- UUID public identifiers unless the team agrees on another stable format.
-- Stable machine-readable error code plus HTTP status, human-readable message and optional field details.
-- Cursor or offset pagination documented once and reused consistently.
-- Bearer access token for protected HTTP endpoints.
-- Explicit revoke/logout behavior and a separately agreed refresh/session contract.
-
-Do not implement a final contract until shared conventions are documented and confirmed. OpenAPI must describe every shipped route with examples.
-
-## 4. Requirements-to-feature traceability
-
-| Requirement | Source | Feature(s) |
-|---|---|---|
-| Account registration via email/password or social account | PDF V.1, pages 7; message.txt lines 26-38 | F-03, F-04, F-05 |
-| Email verification and forgot/change password | PDF V.1, page 7; message.txt lines 26-38 | F-04 |
-| Link Facebook/Google account to existing account | PDF V.1, page 7; V.5, page 10 | F-05 |
-| Public/friend/private profile information and music preferences | PDF V.1, page 7 | F-06 |
-| At least two collaborative music functions | PDF V.2, page 8 | F-08-F-11, selection in OD-1 |
-| Public/private event visibility and invited-only private access | PDF V.2.1, page 8 | F-09 |
-| Voting, track ordering and vote concurrency | PDF V.2.1, page 8 | F-09 |
-| Location/time and invited/license voting rules | PDF V.2.1, pages 8 | F-09, F-12 |
-| Device-specific music-control delegation and friend control | PDF V.2.2, page 9 | F-11 |
-| Public/private playlist and invited editing | PDF V.2.3, page 9 | F-08 |
-| Realtime collaborative playlist with concurrency protection | PDF V.2.3, page 9 | F-08 |
-| Backend authoritative data storage | PDF V.3, page 10 | F-01, F-02, F-07-F-12 |
-| REST/JSON API with reference documentation | PDF V.4, page 10 | F-02, F-13 |
-| Configurable backend address and remote-control client assumptions | PDF V.5, page 10 | F-01, F-13 |
-| Access isolation, malicious-behaviour protections and logging | PDF V.6, page 11 | F-03-F-05, F-12 |
-| Mobile action logs containing platform, device and app version | PDF V.6, page 11 | F-12 |
-| Load/support measurement with server characteristics | PDF V.7, page 11 | F-14 |
-| Team workflows, quality and one-off tests | PDF V.8, page 11 | F-13-F-14 |
-| Secrets in `.env`, not git | PDF V.8, page 11 | F-01 |
-| Multi-platform bonus | PDF VI.1, page 12 | B-01 |
-| IoT reflection or mechanism | PDF VI.2, page 12 | B-02 |
-| Free/paid subscription logic | PDF VI.3, page 12 | B-03 |
-| Offline and synchronization bonus | PDF VI.4, pages 12-13 | B-04 |
-
-## 5. Mandatory feature implementation plan
-
-## F-01 — Backend foundation and environment
-
-**Prompt**
-
-You are a backend coding agent implementing the first runnable Cuevo backend increment.
-
-### Role and objective
-
-Create a minimal, reproducible FastAPI backend with environment loading, PostgreSQL configuration, SQLAlchemy, Alembic and a health endpoint. Do not implement product domain features in this feature.
-
-### Project context
-
-- The repository is on the `backend` branch and has a separate `backend/` directory.
-- The backend is the source of truth for service data.
-- The frontend is React Native/Expo and needs a configurable API base URL.
-- The specification calls the product *Music Room*; repository-facing documentation must call it Cuevo and explain the naming.
-- PostgreSQL, SQLAlchemy, Alembic and FastAPI are proposed only; inspect existing conventions before choosing final files.
-
-### Prerequisites
-
-- None. This feature establishes the foundation.
-
-### Scope
-
-Implement application startup, configuration, PostgreSQL connectivity, migration infrastructure and health/readiness behavior. Do not implement accounts, playlists or rooms.
-
-### Requirements
-
-- Create or use a conventional FastAPI application entry point under `backend/`.
-- Load configuration from environment variables and provide `backend/.env.example` with safe placeholders. Never commit real credentials or secrets.
-- Add PostgreSQL and SQLAlchemy dependencies with a clean-clone installation mechanism already expected by the repository, such as a requirements file or Makefile.
-- Configure Alembic without creating speculative domain migrations.
-- Add `GET /health` or another clearly documented health endpoint that reports process/API readiness and does not expose secrets.
-- Include startup instructions for Linux/macOS and for the development database.
-- Document a safe local-development database setup.
-
-### Interfaces/contracts
-
-No product endpoint is known yet. The health response shape must be proposed in code and OpenAPI.
-
-### Security and correctness
-
-- Fail closed for missing required configuration.
-- Never log database passwords or provider secrets.
-- Use separate development/test database configuration.
-- Keep migration metadata and application startup reproducible.
-
-### Tests
-
-- Test application startup and configuration validation.
-- Test the health endpoint.
-- Test database configuration in an isolated test database or supported test setup.
-- Test a no-secret configuration by proving placeholder values are documented and not committed.
-
-### Acceptance criteria
-
-- A clean clone can install dependencies using the documented command.
-- Migrations initialize and upgrade successfully in a disposable PostgreSQL database.
-- The API starts and the health endpoint succeeds.
-- `.env.example` contains no credentials and required variables are documented.
-- All required tests pass.
-
-### Documentation
-
-Update `backend/README.md` and relevant backend docs for setup and environment variables. Update the global `README.md` only with project-wide setup/navigation changes, as needed.
-
-### Execution constraints
-
-Inspect existing files before creating the project structure. Preserve unrelated user changes. Use no secrets, avoid speculative features and report changed files and exact test commands/results.
-
-## F-02 — API conventions and shared error handling
-
-**Prompt**
-
-You are implementing shared API behavior for the Cuevo backend.
-
-### Role and objective
-
-Establish the versioned REST contract, validation behavior, stable errors, pagination, identifiers, timestamps and OpenAPI documentation conventions.
-
-### Project context
-
-- F-01 must provide an application, environment configuration and database startup.
-- The mobile app is separate and needs stable, machine-readable response behavior.
-- The proposed API path convention is `/api/v1`, but frontend confirmation is required before this becomes final.
-
-### Prerequisites
-
-- F-01.
-- No unresolved API change should be hidden by F-02; record unresolved choices in the plan.
-
-### Scope
-
-Implement shared request/response infrastructure only. Do not implement authentication or domain resources.
-
-### Requirements
-
-- Create a versioned router convention based on the proposed `/api/v1` base path.
-- Use JSON for request and response bodies.
-- Define RFC 3339 UTC date handling and document timezone behavior.
-- Propose UUID public identifiers or stop and record an open decision if the team has an identifier format.
-- Implement consistent validation and stable error responses with HTTP status, machine-readable code, message and optional field details.
-- Implement or document pagination consistently; do not mix cursor and offset conventions across product routes.
-- Configure CORS only for agreed development origins.
-- Publish route documentation and examples through FastAPI/OpenAPI.
-
-### Interfaces/contracts
-
-Define an error envelope and a validation-error shape; do not invent domain endpoint payloads.
-
-### Security and correctness
-
-- Never leak internal exception details.
-- Normalize invalid JSON and malformed identifier responses.
-- Add request-size limits and centralized exception handlers.
-- Preserve stable public codes even if implementation details change.
-
-### Tests
-
-- Test successful JSON handling.
-- Test malformed JSON and validation errors.
-- Test unknown routes and unexpected server errors.
-- Test each pagination or identifier convention introduced.
-
-### Acceptance criteria
-
-- All shared responses follow one documented contract.
-- OpenAPI is reachable and includes stable error/validation examples.
-- Invalid input uses documented status codes and machine-readable codes.
-- Relevant tests pass.
-
-### Documentation
-
-Update `backend/README.md` and backend API documentation. Update the global `README.md` only if project-wide navigation/setup changes.
-
-### Execution constraints
-
-Follow F-01 conventions, avoid account-specific implementation and report exact test commands/results.
-
-## F-03 — Authentication foundation and sessions
-
-**Prompt**
-
-You are implementing the Cuevo account authentication foundation.
-
-### Role and objective
-
-Implement secure password accounts, login, authenticated-user lookup, session renewal/revocation, logout and password hashing using the approved authentication contract.
-
-### Project context
-
-- The frontend flow requires sign-up, login, current-user lookup, session renewal and logout.
-- The proposed stack is FastAPI, PostgreSQL, SQLAlchemy and JWT, but OD-2 and OD-3 remain open.
-- The spec requires authenticated isolation and protection against brute-force/session theft.
-
-### Prerequisites
-
-- F-01 and F-02.
-- The team must resolve session/refresh token format and expiry before final route names or mobile storage are documented.
-
-### Scope
-
-Implement email/password account access and session lifecycle. Do not implement verification or recovery in this feature, provider sign-in in F-05, or profile domain data beyond the minimum authenticated-user relationship.
-
-### Requirements
-
-- Implement secure account registration data and password hashing.
-- Implement login and invalid-credential responses with a stable public error code.
-- Implement authenticated-user lookup.
-- Implement session renewal and logout/revocation using the frontend-confirmed contract.
-- Store only the minimum server-side session or refresh state required for revocation and expiry.
-- Add authentication dependency and authorization primitives for later features.
-- Add explicit duplicate-email handling.
-- Rate-limit authentication endpoints; document limits and behavior under rate limiting.
-
-### Interfaces/contracts
-
-Do not finalize endpoint names or the token envelope before OD-2 is resolved. Proposed route families are registration, login, `/me`, session renewal and logout. Document exact names and examples in OpenAPI.
-
-### Security and correctness
-
-- Hash passwords with an established password-hashing library; never store reversible password data.
-- Treat email identity consistently, including a documented normalization rule.
-- Protect against timing leaks where practical.
-- Revoke a session on logout and define behavior for expired/revoked sessions.
-- Include platform/device/app-version audit context if available with every authenticated mobile action.
-- Prevent one user from accessing another user's data.
-
-### Tests
-
-- Registration success and duplicate email.
-- Login success and invalid credentials.
-- Authenticated `/me` success.
-- Missing, malformed, expired and revoked session behavior.
-- Session renewal success and failure.
-- Logout revocation.
-- Password hashing verification.
-- Authentication endpoint rate-limit behavior.
-- Authorization isolation across two test users.
-
-### Acceptance criteria
-
-- The frontend can complete register/login/current-user/logout flows against documented endpoints.
-- Session renewal and revocation are observable and tested.
-- Invalid credentials do not reveal account/password details.
-- Stable error codes are documented.
-- Required tests pass.
-
-### Documentation
-
-Update `backend/README.md` and backend authentication/API documentation with the session contract, client storage expectations and sample requests/responses. Update the global `README.md` as needed.
-
-### Execution constraints
-
-Do not commit credentials or secret keys. Preserve the team-confirmed API conventions and report exact test commands/results.
-
-## F-04 — Email verification and password recovery
-
-**Prompt**
-
-You are implementing email verification and password recovery for Cuevo.
-
-### Role and objective
-
-Implement server-checked verification, resend, forgot-password, reset-code and change-password flows with a local-development email option.
-
-### Project context
-
-- F-03 establishes account/session primitives.
-- `message.txt` explicitly requires verify email, resend, forgot/reset and change-password flows.
-- Code format, expiry, resend cooldown and validation rules are open decisions.
-
-### Prerequisites
-
-- F-02 and F-03.
-- OD-3 must be resolved before finalizing public endpoint behavior.
-
-### Scope
-
-Implement verification and recovery codes and delivery integration. Do not implement Google sign-in or profile data.
-
-### Requirements
-
-- Verify email ownership on server.
-- Support resend with cooldown and documented duplicate/resend behavior.
-- Support forgot-password reset and reset-code confirmation.
-- Support authenticated password changes.
-- Store code values securely, such as hashes, with expiry and one-time use semantics.
-- Return stable `expired_code`, `invalid_code`, `duplicate_email`, `invalid_credentials` and equivalent frontend-translatable codes agreed with F-03.
-- Rate-limit verification and code endpoints.
-- Provide a local-development email option that does not require external delivery, such as console output or a documented local mail capture tool.
-
-### Interfaces/contracts
-
-Do not choose code length, alphabet, expiry or resend cooldown without team agreement. Once agreed, document exact route names, request fields, responses and examples in OpenAPI.
-
-### Security and correctness
-
-- Hash or otherwise protect code values at rest.
-- Prevent enumeration where possible and document where enumeration remains observable.
-- Invalidate superseded/used codes as agreed.
-- Invalidate affected sessions when passwords change or reset, except as explicitly decided.
-- Ensure password changes require current authentication or a valid verified recovery state.
-
-### Tests
-
-- Successful verification and resend.
-- Invalid and expired verification codes.
-- Successful reset and password change.
-- Invalid and expired reset codes.
-- Duplicate email behavior.
-- Resend cooldown.
-- Code replay prevention.
-- Session invalidation on password reset/change where required.
-
-### Acceptance criteria
-
-- The frontend can verify, resend, recover and change passwords against the running backend.
-- Codes are hashed/protected, expire and cannot be replayed.
-- Local email delivery is reproducible.
-- Stable errors are documented and tested.
-- Required tests pass.
-
-### Documentation
-
-Update setup, email configuration, endpoint examples and recovery/session behavior in backend docs and `backend/README.md`. Update the global `README.md` only as needed.
-
-### Execution constraints
-
-Use `.env.example` placeholders; no real credentials. Do not commit mail-provider output or test credentials. Report exact test commands/results.
-
-## F-05 — Google identity verification and account linking
-
-**Prompt**
-
-You are implementing Google sign-in integration for Cuevo.
-
-### Role and objective
-
-Implement server-side Google identity verification and explicit linking to an authenticated Cuevo account.
-
-### Project context
-
-- The subject requires social registration/linking and OAuth support in the mobile app.
-- `message.txt` reserves native client integration for the frontend but requires backend token verification.
-- Facebook or Google is accepted by the subject; the team message explicitly discusses Google sign-in and a linked-accounts UI.
-
-### Prerequisites
-
-- F-03 for account/session behavior.
-- OD-6 resolved: native token type, provider audience/configuration and exchange contract.
-
-### Scope
-
-Implement Google identity verification and linking. Do not add a Facebook implementation unless separately agreed.
-
-### Requirements
-
-- Verify provider identity on the backend against the configured provider.
-- Create or find an account only according to the explicitly agreed linking policy.
-- Require authentication for linking a provider to an existing account.
-- Prevent linking the same provider identity to two Cuevo accounts.
-- Use provider configuration only through environment variables.
-- Document provider setup and a reproducible test strategy.
-
-### Interfaces/contracts
-
-Define client/server token exchange only after OD-6. Do not design provider payloads from assumed SDK internals.
-
-### Security and correctness
-
-- Validate issuer, audience and provider-specific signature claims.
-- Store provider subject identifiers rather than relying only on mutable email values.
-- Avoid account takeover through an unverified email.
-- Never log tokens or credentials.
-
-### Tests
-
-- Successful sign-in/link.
-- Invalid/expired provider token.
-- Wrong audience or issuer.
-- Duplicate provider identity.
-- Linking to another user's account is rejected.
-- Explicit linking requires authentication.
-
-### Acceptance criteria
-
-- Backend accepts and verifies the approved Google credential and creates or returns the expected Cuevo session.
-- Linking is authenticated and unambiguous.
-- Configuration is documented with safe placeholders.
-- Required tests pass.
-
-### Documentation
-
-Update backend authentication/provider setup docs and `backend/README.md`; update the global `README.md` only as needed.
-
-### Execution constraints
-
-No provider secrets in source control. Inspect existing auth conventions and report exact test commands/results.
-
-## F-06 — Profile and friendship integration contract
-
-**Prompt**
-
-You are implementing the backend foundation for Cuevo public, friend-only and private profile data.
-
-### Role and objective
-
-Create the profile data model and API contract needed by the mobile profile flow while respecting the team’s stated frontend ownership of the profiles/friendships feature.
-
-### Project context
-
-- F-03 provides authenticated account identity.
-- `message.txt` says the frontend developer contributes the profiles/friendships backend feature with backend review.
-- `message.txt` lists display name/photo plus username, bio, location and preferred genres.
-
-### Prerequisites
-
-- F-03.
-- OD-4 resolved for identifier and photo contract.
-- OD-5 resolved for ownership and feature scope.
-
-### Scope
-
-Implement only profile data and visibility behavior agreed with the frontend owner. If friendship implementation remains the frontend developer’s responsibility, establish shared conventions and test interfaces, but do not duplicate ownership in the backend plan.
-
-### Requirements
-
-- Link profile state to its account without ambiguity.
-- Implement public, friend-only and private profile field visibility according to the agreed ownership model.
-- Support reading/updating the fields agreed in `message.txt`.
-- Define photo upload or reference handling without assuming object storage.
-- Define validation rules and stable profile error codes.
-- Avoid returning private/friend-only fields to unauthorized viewers.
-
-### Interfaces/contracts
-
-Do not invent the friendship model or photo-storage provider until OD-4/OD-5 are resolved. Document exact routes and schemas in OpenAPI.
-
-### Security and correctness
-
-- Authorization must be based on server friendship membership if friendships are implemented.
-- Prevent profile updates by non-owners.
-- Validate text and image metadata.
-- No private fields should appear in list/search responses unless explicitly authorized.
-
-### Tests
-
-- Owner updates profile.
-- Non-owner cannot update.
-- Public field visibility.
-- Friend-only visibility.
-- Private visibility.
-- Invalid or missing profile fields.
-
-### Acceptance criteria
-
-- An authenticated user can complete the profile setup flow with the agreed contract.
-- Visibility rules are enforced server-side.
-- Identifier/photo behavior is documented and tested.
-- Required tests pass.
-
-### Documentation
-
-Update backend profile/friendship ownership docs and API reference. Update `backend/README.md` and global `README.md` only as needed.
-
-### Execution constraints
-
-Coordinate rather than duplicating the frontend-owned implementation. Report exact test commands/results.
-
-## F-07 — Shared music catalog and track model
-
-**Prompt**
-
-You are establishing the Cuevo music catalog used by playlists and rooms.
-
-### Role and objective
-
-Implement a small, authoritative catalog/search representation sufficient for track suggestions and playlist operations.
-
-### Project context
-
-- The subject does not specify a catalog provider or track identifier.
-- `message.txt` proposes song catalog/search in the playlists phase.
-
-### Prerequisites
-
-- F-02.
-- OD-9 resolved: seed/import/provider approach.
-
-### Scope
-
-Implement a catalog boundary and search/list operations. Do not implement voting or playlist editing.
-
-### Requirements
-
-- Define immutable track identity and the minimum metadata required to display/search tracks.
-- Implement search and retrieval APIs agreed with the frontend.
-- Support deterministic ordering for duplicate/search results.
-- Keep provider-specific identifiers isolated if an external provider is selected.
-- Document data provenance and cache-free source-of-truth rules.
-
-### Interfaces/contracts
-
-Do not invent a provider SDK or external API. Exact catalog fields and route names depend on OD-9.
-
-### Security and correctness
-
-- Validate catalog identifiers and search input.
-- Prevent unauthorized catalog writes unless explicitly assigned.
-- Record provider data changes safely and avoid mutable provider IDs.
-
-### Tests
-
-- Catalog retrieval.
-- Search success and no-results behavior.
-- Invalid and oversized search input.
-- Duplicate/identifier consistency.
-
-### Acceptance criteria
-
-- The frontend can retrieve and search the agreed catalog.
-- Tracks are referenced consistently by playlist and room features.
-- Catalog source and authority are documented.
-- Required tests pass.
-
-### Documentation
-
-Document catalog source, routes and setup in backend docs and `backend/README.md`. Update the global `README.md` only as needed.
-
-### Execution constraints
-
-Do not add an external provider without OD-9. Report exact test commands/results.
-
-## F-08 — Playlist CRUD, permissions and realtime collaboration
-
-**Prompt**
-
-You are implementing collaborative playlist editing for Cuevo.
-
-### Role and objective
-
-Create backend-authoritative playlist CRUD, public/private visibility, invitations, licensing, realtime edits and concurrency protection.
-
-### Project context
-
-- This feature satisfies Music Playlist Editor from PDF V.2.3.
-- It can operate in parallel with room/voting once shared catalog, auth and API conventions exist.
-- The subject requires concurrent move/update safety and private invited-only access.
-
-### Prerequisites
-
-- F-03, F-06 conventions, F-07.
-- F-02 for API/event contracts.
-- OD-8 resolved for license behavior and OD-10 resolved for realtime event semantics.
-
-### Scope
-
-Implement playlist entities, membership/invitations, public/private access, edit permissions and realtime operations. Do not implement room queues or voting ranking.
-
-### Requirements
-
-- Create, retrieve, update and delete playlists according to ownership rules.
-- Public playlists are accessible by every authenticated user by default, unless the spec's team contract adds restrictions.
-- Private playlists are accessible only to the owner and invited users.
-- By default every authorized user can edit a public playlist.
-- With the agreed restricted license, only invited users can edit.
-- Support ordered track positions and authenticated collaborative track moves/add/remove operations.
-- Use database transactions and optimistic version checks or another explicitly documented concurrency mechanism.
-- Broadcast playlist mutations over WebSockets to authorized subscribers.
-
-### Interfaces/contracts
-
-Do not invent event names or payloads until OD-10 is resolved. Document HTTP routes and WebSocket event envelope in OpenAPI or a linked API reference.
-
-### Security and correctness
-
-- Enforce visibility and edit permissions on every HTTP and WebSocket operation.
-- Prevent moving/deleting stale positions through versioned updates.
-- Reject non-member private access.
-- Make mutation authorization and ranking/idempotency explicit.
-
-### Tests
-
-- Playlist CRUD ownership.
-- Public/private retrieval.
-- Default public edit permissions.
-- Restricted invited-user edit permissions.
-- Unauthorized edit/retrieval.
-- Concurrent track moves of the same/different tracks.
-- Realtime event delivery and subscription authorization.
-- Reconnect/replay or stale-version behavior.
-
-### Acceptance criteria
-
-- Public and private visibility work server-side.
-- Concurrent mutations preserve a single deterministic ordered playlist.
-- Authorized clients receive realtime mutations.
-- Unauthorized clients cannot read or edit private playlists.
-- Required tests pass.
-
-### Documentation
-
-Update backend API/WebSocket, authorization and playlist data docs. Update `backend/README.md` and global `README.md` as needed.
-
-### Execution constraints
-
-Follow agreed license and realtime contracts. No unrelated room/vote implementation. Report exact test commands/results.
-
-## F-09 — Room discovery, membership, visibility and voting queue
-
-**Prompt**
-
-You are implementing Cuevo live Music Track Vote rooms.
-
-### Role and objective
-
-Create public/private rooms, discovery and invitations, memberships, track suggestions, voting policies and deterministic queue ranking.
-
-### Project context
-
-- This feature implements PDF V.2.1.
-- The subject requires public discovery by default and private invited-only discovery/voting.
-- License rules may restrict voting to invited people or a location/time policy.
-
-### Prerequisites
-
-- F-03, F-06 conventions, F-07.
-- OD-7 and OD-8 resolved for location/time and license rules.
-- OD-10 resolved for realtime event semantics.
-
-### Scope
-
-Implement rooms, memberships, suggestions, votes and queue ranking. Do not implement playlist collaboration or playback-device control.
-
-### Requirements
-
-- Create and manage public/private rooms.
-- Public rooms are discoverable and default-voting users can find/vote.
-- Private rooms are discoverable/votable only by invited users.
-- Let authorized users suggest tracks.
-- Support one or more vote rules as agreed; document repeated vote behavior.
-- Rank the queue so tracks with more valid votes move earlier.
-- Implement server-side invited/license/location/time eligibility.
-- Protect voting and room state with transactions.
-- Coordinate playback state only after OD-11 is resolved.
-
-### Interfaces/contracts
-
-Do not invent room codes, location radius, timezone or 4-6 PM semantics. Document exact routes and event payloads after decisions are approved.
-
-### Security and correctness
-
-- Recompute or transactionally update ranking when concurrent votes arrive.
-- Prevent duplicate/ineligible/unauthorized votes under the agreed policy.
-- Treat room location/time checks only as server-supported authorization policy; never trust client-reported eligibility as final.
-- Protect private room discovery and membership.
-
-### Tests
-
-- Public/private discovery.
-- Invitation membership.
-- Track suggestion authorization.
-- Public default voting.
-- Invited-only licensed voting.
-- Location/time eligible/ineligible policy once contract exists.
-- Concurrent equal/different-track voting.
-- Queue ranking and tie behavior.
-- Unauthorized/private room access.
-
-### Acceptance criteria
-
-- Room visibility and invitations are enforced.
-- Valid votes are counted once according to the agreed rule.
-- Concurrent votes produce no duplicate or lost ranking update.
-- Queue position is derived from backend state.
-- Required tests pass.
-
-### Documentation
-
-Update room/voting API, policy fields and WebSocket docs. Update `backend/README.md` and global `README.md` as needed.
-
-### Execution constraints
-
-No final location/time or license assumptions without open-decision resolution. Report exact test commands/results.
-
-## F-10 — Room realtime membership and playback coordination
-
-**Prompt**
-
-You are implementing realtime room membership and playback coordination.
-
-### Role and objective
-
-Deliver authorized realtime room updates and any playback-state coordination agreed by the team.
-
-### Project context
-
-- F-09 establishes room state.
-- The subject requires live collaboration but does not define a playback-state authority.
-- `OD-11` must establish host-only versus delegated playback responsibility.
-
-### Prerequisites
-
-- F-09.
-- F-08 or shared WebSocket conventions.
-- OD-10 and OD-11 resolved.
-
-### Scope
-
-Implement room WebSockets, membership updates and playback state only if agreed. Do not implement a separate playback engine.
-
-### Requirements
-
-- Authenticate WebSocket connections.
-- Authorize room access for join/subscription.
-- Send membership, queue and playback updates in a versioned event envelope.
-- Define disconnect/reconnect and stale-state behavior.
-- Make the backend authoritative for agreed room/playback state.
-- Make clients display and control state only within server authorization.
-
-### Interfaces/contracts
-
-No invented event names or payloads. Document exact event types and replay behavior.
-
-### Security and correctness
-
-- Reject unauthorized room subscriptions and mutations.
-- Prevent stale playback operations.
-- Preserve ordering and idempotency for accepted events.
-- Use explicit close/error codes.
-
-### Tests
-
-- Authorized/rejected WebSocket connection.
-- Room membership changes.
-- Reconnect and stale state.
-- Concurrent accepted/rejected playback actions.
-- Event ordering and replay behavior.
-
-### Acceptance criteria
-
-- Only room members receive or mutate authorized room state.
-- Reconnection does not expose stale or unauthorized state.
-- Playback authority matches OD-11.
-- Required tests pass.
-
-### Documentation
-
-Update WebSocket lifecycle, event contracts and security docs. Update `backend/README.md` and global `README.md` as needed.
-
-### Execution constraints
-
-No device playback implementation unless explicitly agreed. Report exact test commands/results.
-
-## F-11 — Device-specific music control delegation
-
-**Prompt**
-
-You are implementing Cuevo Music Control Delegation.
-
-### Role and objective
-
-Implement device-specific attached-device state and licensed control delegated to friends.
-
-### Project context
-
-- The subject requires one license management rule specific to each user-attached device.
-- The user can give music control to different friends.
-
-### Prerequisites
-
-- F-03 and F-06 conventions.
-- OD-8 resolved for license/entitlement semantics.
-- OD-11 resolved for playback authority if linked to live rooms.
-
-### Scope
-
-Implement device registration, ownership, delegated friends and authorized control operations. Do not implement hardware playback or a provider SDK.
-
-### Requirements
-
-- Link devices to exactly one owning account according to the agreed ownership model.
-- Store device identifiers and metadata safely.
-- Let owners grant/revoke control to approved friends.
-- Enforce device-specific license/entitlement state.
-- Record or reject control actions according to authorization.
-
-### Interfaces/contracts
-
-Do not invent device registration protocol or hardware capabilities. Agree routes and payload fields before implementation.
-
-### Security and correctness
-
-- Only the owner may attach or revoke ownership.
-- Prevent one account from controlling another account's unlicensed device.
-- Use explicit revocation and expiry behavior.
-- Log control grants and actions.
-
-### Tests
-
-- Device owner registration.
-- Unauthorized device registration/access.
-- Grant/revoke delegation.
-- Delegated action success and loss of access after revocation.
-- Device-specific license enforcement.
-
-### Acceptance criteria
-
-- Device ownership and delegations are enforceable server-side.
-- Revocation takes effect immediately.
-- Required tests pass.
-
-### Documentation
-
-Update authorization/device/license API docs and `backend/README.md`. Update global `README.md` as needed.
-
-### Execution constraints
-
-No hardware integration without an explicit approved contract. Report exact test commands/results.
-
-## F-12 — Security logging, audit trails and hardening
-
-**Prompt**
-
-You are hardening the Cuevo backend and completing cross-feature audit logging.
-
-### Role and objective
-
-Implement access controls, required mobile-action logs, security headers/rate limits and a documented hazard register.
-
-### Project context
-
-- PDF V.6 requires users not to access others' data and requires every mobile action to generate backend logs.
-- Required mobile log fields are platform, device and application version.
-- PDF V.8 forbids committed credentials.
-
-### Prerequisites
-
-- F-03-F-11 relevant domain features.
-- Stable API conventions and authentication context.
-
-### Scope
-
-Implement logging, security middleware and hardening. Do not replace domain authorization with logging-only controls.
-
-### Requirements
-
-- Add/standardize authenticated action logs with platform, device and application version.
-- Ensure every mobile mutation route can emit the agreed audit metadata.
-- Log authentication failures, authorization failures and privilege changes without sensitive values.
-- Identify brute-force, credential replay, session theft, provider token replay, private-room leakage and WebSocket abuse protections.
-- Rate-limit public and privileged endpoints according to the agreed policy.
-- Configure safe proxy, CORS and security-header behavior.
-- Establish sensitive-data redaction.
-
-### Interfaces/contracts
-
-Log schema and event names must be documented, including correlation IDs and fields that are intentionally excluded.
-
-### Security and correctness
-
-- Audit logs must not contain passwords, reset codes, provider tokens or session secrets.
-- Apply authorization server-side for every protected route.
-- Establish retention/rotation behavior without claiming production compliance.
-- Check abuse protections in tests.
-
-### Tests
-
-- Unauthorized access for each protected domain.
-- Required mobile log fields.
-- Sensitive value redaction.
-- Brute-force/rate-limit behavior.
-- Session theft/revocation.
-- Private data leakage across users.
-
-### Acceptance criteria
-
-- Mobile actions produce documented audit records.
-- Security middleware and protections are active.
-- No sensitive values appear in logs or source.
-- Required tests pass.
-
-### Documentation
-
-Add security/threat/hardening documentation and setup notes. Update `backend/README.md` and global `README.md` as needed.
-
-### Execution constraints
-
-Do not claim the API is unbreakable. Report exact test commands/results.
-
-## F-13 — Integration test suite and API examples
-
-**Prompt**
-
-You are completing Cuevo backend verification and integration documentation.
-
-### Role and objective
-
-Create focused unit, integration and API/WebSocket tests and update API examples for frontend-ready flows.
-
-### Project context
-
-- Mandatory backend features should be complete or a selected subset clearly identified.
-- The subject requires team quality, one-off tests and API documentation.
-
-### Prerequisites
-
-- F-03-F-12, with incomplete features blocked and reported rather than hidden.
-- OD-1 resolved for the minimum two services or all selected services.
-
-### Scope
-
-Implement test coverage and examples. Do not add product features outside existing acceptance criteria.
-
-### Requirements
-
-- Add a test database strategy and reproducible test commands.
-- Cover complete happy and failure flows.
-- Add API examples for registration, verification, login, renewal, recovery, logout and selected product services.
-- Verify OpenAPI route/error examples match shipped behavior.
-- Add a test account or reproducible account creation procedure.
-- Add CI-friendly test execution if repository conventions support it.
-
-### Tests
-
-- Unit tests for auth, permissions, licenses and ranking/concurrency logic.
-- Integration tests for database migrations and protected endpoints.
-- WebSocket tests for collaboration and authorization.
-- Security regression tests for IDOR, private resources and token/session failures.
-
-### Acceptance criteria
-
-- The documented test command passes.
-- The frontend can follow reproducible setup and API examples.
-- Mandatory selected flows pass end to end against the running backend.
-- Test and migration commands are in documentation.
-- Required tests pass.
-
-### Documentation
-
-Update backend API README, testing documentation and setup. Update the global `README.md` only as needed.
-
-### Execution constraints
-
-Do not claim full success until all required tests run. Report exact test commands/results and any environment limitation.
-
-## F-14 — Load testing and deployment/run evidence
-
-**Prompt**
-
-You are defining and executing Cuevo backend ramp-up evidence.
-
-### Role and objective
-
-Measure the API/backend capacity for the selected mandatory services and document server characteristics and reproducible load methodology.
-
-### Project context
-
-- PDF V.7 requires justified and measured simultaneous-user capacity.
-- PDF V.7 provides no fixed threshold.
-- No performance target has been established.
-
-### Prerequisites
-
-- F-13 and a running mandatory backend.
-- Agreed test environment with CPU, RAM and deployment/premise details.
-- OD-1 resolved for the services included.
-
-### Scope
-
-Define and run a load test for authentication and the selected two or more services. Do not claim an architecture-wide guarantee.
-
-### Requirements
-
-- Record server/runner CPU, RAM, OS, database location and network topology.
-- Select and document AB, Gatling, Siege, Tsung or JMeter.
-- Exercise realistic authentication and service action mixes.
-- Measure latency, error rate and capacity saturation.
-- Include repeated-room/voting and collaboration scenarios if relevant.
-- State the test duration, ramp shape, concurrent users and data volume.
-- Document failure/limitations instead of extrapolating unsupported limits.
-
-### Tests
-
-- Smoke load test.
-- Incremental concurrency test.
-- Failure/error threshold check.
-- Database connection and migration consistency check.
-- Repeated run or reproducibility check.
-
-### Acceptance criteria
-
-- A documented test command/scenario exists.
-- Server characteristics are recorded.
-- Maximum tested concurrency is reported with latency/error evidence.
-- If targets exist, state their source and whether measured results pass.
-- Required tests pass or the report identifies exactly what could not run.
-
-### Documentation
-
-Update backend performance/run/deployment documentation and `backend/README.md`. Update the global `README.md` only as needed.
-
-### Execution constraints
-
-Do not fabricate capacity. Report exact test commands/results and environment.
-
-## 6. Bonus feature implementation plan
-
-Bonus work must not begin until all mandatory scope selected for evaluation is complete and verified.
-
-## B-01 — Multi-platform support
-
-**Prompt**
-
-You are adding Cuevo backend support for a bonus responsive web client or another platform.
-
-### Prerequisites
-
-- F-13 and F-14 with all mandatory work verified.
-- The team has approved a web platform or other client contract.
-
-### Scope
-
-Keep existing mobile APIs compatible and add platform-neutral contracts only as needed. Do not rewrite mandatory behavior.
-
-### Requirements
-
-- Verify CORS/session behavior for approved web clients.
-- Ensure API responses do not depend on iOS/Android fields.
-- Document responsive web setup and integration.
-- Test approved platform flows.
-
-### Acceptance criteria
-
-- The bonus platform can use documented APIs without server-side mobile assumptions.
-- Tests pass and setup is documented.
-
-### Documentation
-
-Update global navigation/setup and backend platform integration docs as needed.
-
-## B-02 — IoT/nearby-event reflection or mechanism
-
-**Prompt**
-
-You are implementing or documenting Cuevo IoT/nearby event support only after all mandatory work is complete.
-
-### Prerequisites
-
-- F-13 and F-14 complete.
-- Product decision for iBeacon or another mechanism.
-
-### Scope
-
-Implement only the approved mechanism or a clearly labeled engineering reflection if implementation was not selected.
-
-### Requirements
-
-- Define location/privacy consent and backend visibility rules.
-- Define event discovery data and iBeacon/provider identifiers.
-- Document and test applicable authorization and opt-out behavior.
-
-### Acceptance criteria
-
-- Approved mechanism/reflection is explicitly documented.
-- Location and event visibility follow agreed privacy rules.
-- Tests pass if implementation is selected.
-
-### Documentation
-
-Update relevant backend and privacy docs as needed.
-
-## B-03 — Free and paid subscription/entitlement
-
-**Prompt**
-
-You are implementing Cuevo free/paid entitlement logic as a bonus.
-
-### Prerequisites
-
-- F-13 and F-14 complete.
-- OD-8 and payment/product rules resolved.
-
-### Scope
-
-Implement server-authoritative subscription and feature entitlements. Do not assume a payment provider or subscription catalogue.
-
-### Requirements
-
-- Define free and paid offers and entitlement states.
-- Support approved plan switching and server-side feature restrictions.
-- Integrate only an approved payment provider and store no payment secrets/cards unnecessarily.
-- Apply entitlements to playlist and other selected features.
-
-### Acceptance criteria
-
-- Entitlement changes are enforced server-side.
-- Plan switching behavior is documented and tested.
-- No payment credentials are committed.
-
-### Documentation
-
-Update backend billing/entitlement docs and setup as needed.
-
-## B-04 — Offline synchronization
-
-**Prompt**
-
-You are implementing Cuevo offline synchronization only after mandatory work is complete.
-
-### Prerequisites
-
-- F-13 and F-14 complete.
-- OD-12 resolved.
-- A bounded offline feature scope is agreed.
-
-### Scope
-
-Implement synchronization and stale-data/conflict handling only for approved features. Do not claim generic offline support.
-
-### Requirements
-
-- Define data versions and conflict resolution.
-- Define stale read/write behavior.
-- Define reconnect replay and conflict reporting.
-- Prevent lost authorization or private-data access while offline.
-
-### Acceptance criteria
-
-- Synchronization behavior is deterministic and tested for accepted conflict cases.
-- Stale data and duplicate operations are handled.
-- Reconnect behavior is documented.
-
-### Documentation
-
-Update offline synchronization and conflict docs as needed.
-
-## 7. Dependency and implementation order
-
-### Recommended mandatory order
-
-1. F-01 Foundation
-2. F-02 API conventions
-3. F-03 Authentication foundation
-4. F-04 Email verification/recovery
-5. F-05 Google sign-in
-6. F-06 Profile integration contract
-7. F-07 Shared catalog
-8. F-08 and F-09 can proceed in parallel after F-07
-9. F-10 Realtime room coordination
-10. F-11 Device control delegation
-11. F-12 Security/hardening
-12. F-13 Integration suite
-13. F-14 Load testing
-
-F-08 and F-09 may overlap only after they share F-02, F-03 and F-07 conventions. F-11 may overlap with room/delegation work only after licensing and playback authority are agreed.
-
-### Frontend Phase 1 order
-
-The message.txt Phase 1 scope should be implemented in this order:
-
-1. F-01 foundation
-2. F-02 API convention
-3. F-03 core accounts/sessions
-4. F-04 email flows
-5. F-05 Google proposal
-6. F-06 profile contract
-7. F-12 auth hardening subset
-8. F-13 auth integration tests and examples
-
-Profiles/friendships ownership (F-06/OD-5) must be agreed before implementation to avoid duplicate backend work.
-
-### Service selection blocker
-
-OD-1 is a blocker for exact mandatory completeness: the subject requires at least two, not all three. The plan includes all three service feature sets because the README/UI and message describe broad Cuevo functionality. Before implementation, the team must mark which are required for evaluation:
-
-- Music Track Vote: F-09/F-10
-- Music Playlist Editor: F-08
-- Music Control Delegation: F-11
-
-The final mandatory minimum may be two of these. Bonus work remains gated until all selected mandatory requirements pass.
+| Python + FastAPI | Existing; continue | FastAPI provides typed HTTP routes and generated OpenAPI for the React Native contract. Keep a modular monolith; do not split services for a two-person team. Confirm supported Python versions in F00. |
+| PostgreSQL | Existing; continue | Durable authoritative state, constraints and transactions fit identity, privacy, membership, ordered collections, votes and revisions. Isolate test DB from dev/prod; prove migrations on fresh PostgreSQL. |
+| SQLAlchemy 2 + Alembic | Existing; continue | ORM/persistence and explicit migration history. Every domain feature owns its model/migration changes with agreed migration coordination; use constraints and transactions for cross-request invariants. |
+| REST + JSON | Specified direction (V.4, p.10); continue | Familiar request/response contract and FastAPI OpenAPI. Keep `/health`; proposed product prefix `/api/v1`, camelCase JSON and cursor pagination require F01 agreement. |
+| WebSockets | Handoff-agreed direction; implement only for realtime needs | Playlist and room state needs live updates. Authenticate and authorize each connection/subscription, broadcast only after commit, version events, bound queues/messages, and resync by fetching an authorized snapshot. Do not add a message broker until deployment/load evidence requires multi-process fan-out. |
+| JWT authentication | User-proposed; validate and specify | A signed, short-lived access token can support native API calls; JWT alone does not provide immediate revocation. Pair with server-tracked, rotating refresh sessions and defined revocation/reuse behavior. Exact claims, signing-key management, lifetimes and storage remain D-10/D-11. |
+| Pytest + HTTPX | Existing; continue | Existing dependencies/tests support unit and API checks. Use isolated PostgreSQL integration tests for persistence/concurrency and WebSocket tests for event behavior; do not rely only on mocked health tests. |
+| Email and social providers | Required capability; provider choice open | Define adapters/contracts and safe local test delivery. Choose provider libraries/configuration only after email and Google/Facebook decisions; verify social credentials server-side. No credential belongs in source control. |
+| Password hashing, throttling, file/media storage | Required capabilities; implementation details to choose during features | Use a maintained password-hashing mechanism and rate-limit sensitive operations. Decide storage only when avatar uploads or real media/provider integrations are specified. Do not choose an external storage/payment/mail vendor prematurely. |
+| Redis, task queues, microservices, second database | Not proposed now | No demonstrated need in the current repository or two-person scope. Reconsider only if measured requirements or a selected external integration demand them. |
+
+### Logical boundaries (proposals, not final schemas)
+
+1. **HTTP routes/controllers** validate transport input and derive identity from verified credentials; schemas map to/from public DTOs.
+2. **Services/domain operations** enforce permissions and product rules; they own transactional boundaries and prevent client-provided `creatorId`, `hostId`, role, score, badge or entitlement from becoming authoritative.
+3. **SQLAlchemy persistence** stores account/session/challenge/provider identities; profile/privacy/friendship; catalog/provider track references; playlists/entries/invitations/revisions; rooms/memberships/queue/votes/playback revisions; notifications; approved entitlements; and security/audit events. These are logical areas only, not a frozen schema.
+4. **Realtime delivery** publishes committed changes with resource revision and operation/event IDs. Viewer-specific fields such as `myVote` and permissions are returned per authorized viewer or fetched separately; never broadcast one user's private fields to every subscriber.
+5. **Authoritative state:** backend owns identity, authorization, privacy, collection ordering, votes/scores, room membership, playback state, revisions, notification read state and entitlements. Client clocks may animate playback progress; local fixture state, client role claims and offline snapshots cannot overwrite server truth.
+6. **External boundaries:** catalog metadata and playable media are distinct; payment provider, email provider, social identity provider, avatar storage, push and BLE radio are not interchangeable. Integrate only the explicitly selected service, validate its responses, and document failure behavior.
+
+## 5. Proposed implementation order and dependencies
+
+| Order | Feature | Prerequisite / gate | Parallel work |
+|---:|---|---|---|
+| 0 | F00 Foundation verification | Existing foundation; no new domain work | None until Python/test/DB/migration setup is reproducible. |
+| 1 | F01 API conventions and errors | F00; frontend contract review | Contract review can run with planning of F02, but routes must follow the agreed shared envelope. |
+| 2 | F02 Email/password account and session lifecycle | F01; D-10 decisions | F03 waits for account/session model. |
+| 3 | F03 Social provider login/linking | F02; D-02 and provider config approval | Can follow F02; do not block F04 on optional provider if email auth contract is stable. |
+| 4 | F04 Profiles and friendships | F01–F02; D-04 and D-09 | Frontend developer implements this backend slice; backend teammate reviews. F05 can run in parallel after F01/F00. |
+| 4 | F05 Catalog and song search | F01; D-12 data source | Can run in parallel with F04; no playable provider assumption. |
+| 5 | F06 In-app notifications | F02; notification DTO/access contract | Implement base read/list behavior; domain-specific producers are added with F04/F07/F08. Optional push is excluded. |
+| 6 | F07 Collaborative playlist service | F01–F06 as needed; D-05/D-07 | Depends on catalog and account identity; requires revision and WebSocket contract from F01. |
+| 7 | F08 Room lifecycle and access | F01–F06; D-06 and join-code decisions | Can parallelize with F07 after shared invitation/notification contracts; share no unreviewed migrations. |
+| 8 | F09 Track voting and queue | F05, F08; D-01/D-06/D-07 | Depends on authoritative room membership, song IDs and approved voting policy. |
+| 9 | F10 Host playback coordination | F08–F09; D-08 | Do not claim complete playback until provider behavior is jointly proven on a real phone. |
+| 10 | F11 Security, action logging, CI and load evidence | All mandatory APIs; D-01/D-17 | Security tests should be added throughout; this is the cross-feature acceptance and measurement gate, not a substitute for feature tests. |
+| Bonus | B01 Subscription offers/entitlements | All mandatory requirements accepted; D-03/D-15 resolved | Must not make mandatory acceptance paths inaccessible without explicit approval. |
+| Bonus | B02 Offline synchronization | All mandatory requirements accepted; revision/idempotency contracts stable; D-14 | Backend sync contract can be specified before frontend offline replay work; do not implement mobile cache here. |
+| Bonus | B03 IoT/proximity | All mandatory requirements accepted; feasibility and D-16 resolved | Reflection/design first; native detection is frontend/device work. |
+| Bonus | B04 Responsive-web backend support | All mandatory requirements accepted; web client decision and D-11 browser auth resolved | Backend browser-origin/session support only; web UI belongs to frontend work. |
+
+## 6. Shared execution rules for every prompt below
+
+Each feature prompt is intended to be copied and run independently. Repeat its local context and prerequisites; do not assume the coding agent has read the planning conversation.
+
+- Work only on the existing `backend` branch and within existing repository conventions. Inspect the current code and applicable contracts first. Do not switch branches or overwrite unrelated work.
+- Implement only the named slice. Do not wire mobile fetch calls, replace mock contexts, redesign screens, create a second backend, or add unapproved product behavior.
+- Do not commit credentials, provider tokens, personal data or production configuration. Use ignored local `.env` files and safe placeholders in `.env.example`.
+- Add focused tests and regression tests; run the focused tests and the backend suite (`cd backend && python -m pytest`) plus relevant PostgreSQL/migration/WebSocket checks. Report exact commands and results. If a required check cannot run, say why and do not claim the feature is complete.
+- Update the global [`README.md`](../../README.md), [`backend/README.md`](../README.md) and relevant files under [`backend/docs/`](./) **as needed** when setup, architecture, database, API, auth, WebSockets, testing, performance or operations change. Keep docs aligned with code; do not make unrelated documentation edits.
+- Report changed files, migration effects, environment variable names (never values), exact verification results, known limits, unresolved decisions and a deterministic demo procedure.
+
+## 7. Feature-by-feature implementation prompts
+
+### F00 — Verify the existing backend foundation
+
+**Copy-paste prompt**
+
+> You are the backend engineer for Cuevo, the repository project specified as *Music Room* Version 6. Verify the existing backend foundation before adding domain features. The repository already contains FastAPI, PostgreSQL configuration, SQLAlchemy 2, Alembic, `GET /health`, and six unit/API tests. Do not rebuild it or add account/domain tables in this task.
+>
+> **Prerequisite and scope:** Work on the existing `backend` branch. Inspect `backend/README.md`, the current settings/database/Alembic files, Compose setup, `.env.example`, tests and Git worktree. Confirm the supported Python version rather than assuming the README's Python 3.11+ range: the handoff reports Python 3.12 verification and a dependency-install failure on Python 3.14. Verify that tests target the isolated test database and never development/production data.
+>
+> **Implement only necessary foundation corrections:** On a clean documented setup, install dependencies, run the existing test suite, start isolated PostgreSQL, apply the current migration on a fresh test database, and verify `/health` when PostgreSQL is ready and unavailable. Check that configuration fails safely and does not expose database credentials. Do not generate speculative domain migrations. If a prerequisite cannot run, report the exact environmental blocker and leave it unclaimed.
+>
+> **Tests and acceptance:** Run `cd backend && python -m pytest`; execute the documented Alembic upgrade against a fresh isolated PostgreSQL database and test health readiness/unavailability. Record the exact commands and outputs. Acceptance requires a reproducible documented setup, isolated test DB, successful migration on fresh PostgreSQL, correct health status codes, and no secret leakage. State if Docker/PostgreSQL was unavailable.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan: no unrelated edits, no mobile integration, safe environment examples, and update the global README, backend README and backend docs as needed. Report changes, test results and unresolved environment/version questions.
+
+### F01 — Freeze API conventions, OpenAPI and error handling
+
+**Copy-paste prompt**
+
+> You are the backend API-contract engineer for Cuevo/Music Room. Implement shared HTTP conventions in the existing FastAPI backend. The mobile UI is a separate React Native/Expo client; do not wire it in this task. Product route names and DTOs are proposals until recorded in OpenAPI and reviewed with the frontend teammate.
+>
+> **Prerequisites:** F00 has verified the existing app and test setup. Preserve `GET /health`. Before finalizing conventions, review the proposed handoff contract: product paths under `/api/v1`; JSON camelCase; opaque string IDs; UTC RFC 3339 timestamps; durations in milliseconds with an `Ms` suffix; bounded cursor pagination `{ items, nextCursor }`; stable ordering; expected resource revision and operation/idempotency ID for retryable mutations; viewer-specific `permissions`; and a consistent error envelope with safe code/message, optional field errors, request ID and safe details.
+>
+> **Scope:** Add shared response/error handling for FastAPI validation, authentication, authorization, not-found, conflict, rate-limit and temporary-unavailable errors. Document proposed status mapping (422, 401, 403, privacy-safe 404, 409, 429, 503) and stable codes. Preserve enough flexibility to represent resource-specific errors without leaking private resource existence. Add OpenAPI examples and document the proposed WebSocket event envelope; do not build domain routes or invent unresolved business rules.
+>
+> **Correctness/security:** Never return exception traces, SQL, tokens, challenge material or secrets. Ensure request IDs are generated/propagated safely and do not trust a client-supplied identity. Document which items remain proposals for frontend approval.
+>
+> **Tests and acceptance:** Add tests for validation/auth/not-found/conflict/throttling/unavailable mappings, response shape, request ID and secret redaction. Run focused tests and `cd backend && python -m pytest`. Acceptance requires stable documented API behavior, generated OpenAPI containing examples, preserved `/health`, and no undocumented exception behavior. Report exact commands/results and blocked checks.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and relevant backend docs as needed; do not make mobile changes or commit secrets.
+
+### F02 — Implement email/password accounts and sessions
+
+**Copy-paste prompt**
+
+> You are implementing Cuevo's email/password account lifecycle in the existing FastAPI/PostgreSQL backend. The frontend is React Native/Expo and its mock flow is Welcome → Sign up → Verify email → Set up profile → Introduction → Home. The backend, not the client, must decide whether an email is verified and whether a session is valid.
+>
+> **Prerequisites:** F00 and F01. Use the approved account, error and token contracts. Before freezing challenge/token policy, resolve with the frontend/team the handoff's provisional six-digit numeric code, 15-minute challenge lifetime, 30-second resend delay, email/password input limits, attempt limits, password Unicode/byte-length rules, email delivery adapter, access-token lifetime, refresh rotation/reuse behavior and concurrent refresh behavior. These are not already-approved server security rules.
+>
+> **Scope:** Implement email/password registration; server-generated, purpose-bound email verification challenges; verify/resend; login; authenticated current-user lookup; renewal; logout/revocation; non-enumerating password-reset request and one-use reset confirmation; authenticated password change; and resumable account/onboarding state with `emailVerified` distinct from `profileCompleted`. Use a maintained password hash, protect challenge/refresh material at rest, and add database constraints for account and session invariants. Deliver a safe local email-development procedure; use a test adapter for tests and do not log active codes. Do not implement social-provider verification or profile/friendship ownership here.
+>
+> **Contracts:** Use F01's error envelope and the handoff's suggested route capabilities (`/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/me`, `/auth/email/verify`, `/auth/email/resend`, `/auth/password/reset/request`, `/auth/password/reset/confirm`, `/me/password`) unless the reviewed OpenAPI uses equivalent routes. Document request/response examples and challenge expiry/resend timestamps. Never return hashes or challenge secrets.
+>
+> **Security and tests:** Rate-limit authentication, resend and recovery operations; cap challenge attempts; expire, replace and consume challenges correctly; prevent reset/account enumeration; reject invalid/expired/reused codes; test duplicate email, invalid credentials, unverified login policy, expired/revoked session, refresh rotation/replay, logout and unauthorized access. Verify a refresh token cannot be reused after rotation under the approved policy. Use real PostgreSQL integration tests for transaction/uniqueness behavior.
+>
+> **Acceptance:** Registration → verification → login → `/me` → refresh → password reset/change → logout/revocation works from documented API examples; challenge state is server-enforced; stable errors and rate limits are documented; local email procedure and deterministic account-creation/demo procedure are reproducible.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update the global README, backend README and relevant auth/API/security docs as needed. Do not change mobile screens/storage or introduce a real email vendor without approval. Report exact tests and any policy decisions still blocking release.
+
+### F03 — Add approved social identity and account linking
+
+**Copy-paste prompt**
+
+> You are implementing social sign-in and explicit account linking for Cuevo. The Music Room subject V.1 names Facebook or Google; the current frontend handoff focuses on Google. The current backend checkout has no mobile source. Do not assume the final provider set: get an explicit team/evaluator decision whether Google alone is accepted or Facebook and Google are both required before adding provider-specific behavior.
+>
+> **Prerequisites:** F02's canonical account/session model and F01's API/error contract; approved provider set, OAuth client/audience configuration and native exchange contract. If provider scope/configuration is not approved, do not invent credentials or mark social auth complete; document the blocker and implement only an agreed provider-neutral boundary if requested.
+>
+> **Scope:** For each approved provider, accept the intended native client credential/token exchange and verify it server-side against the provider's issuer, audience, signature/metadata and expiry. Create/login only under an explicit collision policy. Add authenticated link/unlink operations; never silently merge accounts. Prevent unlinking the last usable login method. Keep provider IDs separate from email and internal account IDs. Do not perform native OAuth UI integration or trust a client-supplied email/profile as proof.
+>
+> **Security/tests:** Test valid/invalid/expired/wrong-audience tokens, provider outage, account collision, unauthenticated linking, linking an identity already owned by another account, unlinking the last login method and refresh/session revocation as agreed. Use provider test keys/fakes; no live credentials in tests or docs.
+>
+> **Acceptance:** Approved provider flows are documented in OpenAPI with safe examples; server identity verification and explicit link/unlink behavior pass automated tests; disabled/unapproved providers are not represented as working features.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and relevant auth docs as needed. Keep native client integration outside this feature; report providers tested and exact test commands/results.
+
+### F04 — Implement profiles and friendships
+
+**Copy-paste prompt**
+
+> You are implementing Cuevo's profile/friendship backend slice under the handoff's ownership split: the frontend developer contributes this backend feature and the backend teammate reviews it. Before coding, confirm that this split and migration ownership still apply. The frontend UI model described by the handoff contains display name, username, bio, location, genres and avatar; privacy states are `public`, `friends` and `private`.
+>
+> **Prerequisites:** F01/F02 account IDs, auth dependencies, database/model/migration conventions and review ownership are established. Resolve username normalization/uniqueness/change rules, field lengths, friendship request lifecycle (duplicate/crossed requests, accept/decline/cancel/remove), unfriend effects, badge meaning and avatar upload/storage/URL contract before freezing schema or API.
+>
+> **Scope:** Implement self-profile read/update, privacy-filtered profile reads, music preferences, friendship request/list/respond/remove and relationship status, and avatar upload/replace/delete only under an approved storage contract. Keep profile completion separate from verified email. Return opaque account IDs and viewer-appropriate capabilities; do not expose hidden field values and ask the client to hide them. Derive account ownership from authentication, never from request-supplied actor IDs. Do not duplicate account/session/provider tables from F02.
+>
+> **Tests/security:** Test own/friend/stranger access for each privacy level, private-field omission, friendship state transitions and edge cases, cross-account mutation, invalid avatar type/size, inaccessible/deleted image behavior and migration upgrade/downgrade where safe. Ensure search/profile counts do not leak hidden profiles/fields.
+>
+> **Acceptance:** The agreed profile/friend contracts are in OpenAPI; only permitted fields are returned; relationship operations are deterministic and authorized; avatar URLs are durable server references, not local `file://` paths. Add a reproducible test account/profile procedure.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Backend teammate reviews auth/database consistency and migrations. Update the global README, backend README and relevant profile/privacy docs as needed; do not modify mobile state or silently change the ownership split.
+
+### F05 — Provide a stable song catalog and search API
+
+**Copy-paste prompt**
+
+> You are implementing Cuevo's backend song metadata/catalog and search contract for Music Track Vote and collaborative playlists. The frontend handoff reports 40 local metadata fixtures with Apple iTunes references, but the current backend checkout has no `mobile/` directory or catalog file. Those references are not playable audio assets and do not establish reuse rights or a selected playback SDK.
+>
+> **Prerequisites:** F00/F01 and an approved metadata source, import method, attribution/refresh policy and provider-ID mapping. Obtain the actual dataset from the frontend branch if it is intended to be reused. Do not fabricate songs, scrape a provider, copy an unavailable file, or infer playback capability from artwork/metadata.
+>
+> **Scope:** Implement stable opaque internal song IDs, separate provider name/track IDs, documented metadata fields, song detail, text/genre search, bounded cursor pagination and deterministic ordering. Include relevant fields only when sourced and approved (for example title, artist, album, durationMs, genres, release date, artwork reference, provider source). Protect provider identifiers from being mistaken for internal IDs. Search privacy filtering must occur before results and counts; do not add unrelated grouped-search UI behavior.
+>
+> **Tests/security:** Test query validation, pagination boundaries/order, provider-ID uniqueness policy, metadata normalization, missing/retired provider records and unauthorized/private result filtering where applicable. Test migrations with the approved seed/import mechanism and prove the test fixture has documented provenance.
+>
+> **Acceptance:** Playlist/queue APIs can reference stable server song IDs; API docs explain metadata provenance and the explicit distinction between metadata and playable media; search output is reproducible and does not depend on fixture slugs.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and catalog/API docs as needed. Do not add a playback SDK/provider until D-08 is resolved; report the data source and exact test commands/results.
+
+### F06 — Add durable in-app notifications
+
+**Copy-paste prompt**
+
+> You are implementing Cuevo's authenticated in-app notification API. The handoff reports a mobile list with friend-request/friend-accepted, room/playlist invitations, playlist updates and room activity, read state and destinations. It also distinguishes OS notification permission from server push delivery. Implement in-app data only unless push is separately approved.
+>
+> **Prerequisites:** F01/F02 account IDs, stable error/pagination contract and an agreed notification DTO. Resource-specific producers are added by the profile, playlist and room features; do not invent invitation acceptance rules here.
+>
+> **Scope:** Persist recipient-scoped notifications; list unread/read items with cursor pagination; expose unread count; mark one/all read; use server timestamps and authorized resource references rather than trusting display text or destination IDs. Define a safe extensible notification kind and make the recipient the only account allowed to read/update it. A notification must never grant access to the referenced profile, playlist or room; re-check resource authorization on navigation/action.
+>
+> **Security/tests:** Test cross-account read/mark-read rejection, pagination stability, duplicate producer delivery/idempotency policy, unavailable/deleted destination behavior, privacy-safe actor summaries and no disclosure of hidden resources. Ensure logs do not include tokens or private payloads.
+>
+> **Acceptance:** API can provide durable in-app unread/read state and resource references for later domain producers; OpenAPI examples use UTC server times; frontend can translate kinds without parsing hard-coded message strings. Do not claim OS push works.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and relevant API docs as needed. Defer native token registration and push-provider delivery; report tests and any producer contracts pending.
+
+### F07 — Implement collaborative playlist editing
+
+**Copy-paste prompt**
+
+> You are implementing Cuevo's mandatory Music Playlist Editor backend. Music Room V.2.3 (p.9) specifies public-by-default playlists, access for every user when public, invited-only access when private, and everyone-editable by default with an invited-only licensed option. The handoff reports the current client create screen defaults to private; follow the subject for the server default and record the client mismatch for later integration. Do not expose private mock fixtures.
+>
+> **Prerequisites:** F01–F06 as needed, canonical accounts/friendships, song IDs, notification base and approved D-05/D-07 decisions. Confirm whether owner-only editing is a supported extra policy, how private invitation acceptance grants visibility, whether duplicate song occurrences are allowed, metadata length limits, deletion/archive effects and licensed edit-policy behavior.
+>
+> **Scope:** Implement create/read/list/search/update and agreed delete/archive; public/private visibility; effective owner/collaborator/everyone edit permissions; invitation send/respond/revoke; stable playlist-entry IDs; atomic add/remove/reorder; authorized snapshot with revision and updatedAt; and WebSocket updates for committed edits/invitations. Keep playlist ownership separate from entry-level authorship. Reject unauthorized private reads before returning records/counts. Validate all permission checks server-side. No last-write-wins replacement of the full playlist.
+>
+> **Concurrency/realtime:** Mutations carry expected revision plus operation ID/idempotency key under the approved F01 contract. Commit domain state before broadcasting; order events per playlist and include revision/event ID. Detect stale edits with the agreed conflict response; on reconnect or revision gap the client fetches the latest authorized snapshot. Do not broadcast viewer-specific permissions as shared state.
+>
+> **Tests/security:** Integration tests with at least two accounts for public/private access, invitations/revocation, permissions, unauthorized operations, duplicate/retry behavior, simultaneous add/remove/reorder, stale revision, atomic rollback, websocket authorization/revocation, event order and reconnect/resync. Test migration on fresh PostgreSQL.
+>
+> **Acceptance:** Public/everyone defaults match the subject; private access is limited to authorized invitees; concurrent edits produce deterministic committed state or explicit conflicts; live clients can recover from a missed event via snapshot; examples and all errors are documented.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and relevant playlist/realtime docs as needed. Do not change the mobile private default in this backend task; report the required frontend integration correction and exact tests/results.
+
+### F08 — Implement room lifecycle, discovery and access
+
+**Copy-paste prompt**
+
+> You are implementing Cuevo's room/event lifecycle and access-control backend needed by Music Track Vote. The subject V.2.1 (p.8) specifies public events as discoverable and votable by all and private events as findable/votable only by invitees. The handoff reports a six-character join-code UI and leaves whether public visitors must explicitly join unresolved. Visibility and vote eligibility are separate concepts; do not conflate them.
+>
+> **Prerequisites:** F01/F02, F04 friendship/invitation coordination and F06 notification base. Agree room lifecycle, host/member/visitor semantics, public Join flow, private invitation/code behavior, six-character alphabet/randomness/expiry/rotation/rate limits, whether codes grant access, discoverability filters and location/time policy representation before finalizing the schema.
+>
+> **Scope:** Implement authenticated create/read/update/end, public/private discovery and search, join/leave, participants/count, current viewer role/capabilities, invitation send/respond/revoke, and approved join-code redemption/rotation. Derive host from authenticated creator, not request payload. Public defaults to public per subject. Private search, counts, code errors, activity and WebSocket subscriptions must not reveal private-room existence to unauthorized users. Persist room state and membership transactionally.
+>
+> **Policy boundary:** Model visibility separately from vote eligibility so F09 can enforce the subject's default and licensed policies. Location/time eligibility is unavailable until D-06 values and client evidence limitations are approved. Do not use profile city text or BLE proximity as trusted GPS evidence.
+>
+> **Tests/security:** Test public discovery/join, private invite-only access, invalid/expired/reused/throttled codes under the approved contract, membership transitions, host permissions, participant privacy, ended rooms, cross-account access, and authorization revocation on active realtime subscriptions.
+>
+> **Acceptance:** Room lifecycle, membership, invitations and search are durable and authorized; responses do not leak private resources; documented examples work with opaque server IDs; room changes publish only after commit.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and relevant room/invitation docs as needed. Do not wire mobile screens or claim proximity/location voting until its decisions and device evidence exist; report exact test commands/results.
+
+### F09 — Implement atomic track suggestions, voting and queue ranking
+
+**Copy-paste prompt**
+
+> You are implementing the mandatory Music Track Vote queue/voting backend for Cuevo. The subject says users may suggest or vote for the next track and a track with many votes moves earlier; it explicitly calls out competition between simultaneous votes (V.2.1, p.8). The handoff proposes `-1/0/1`, one vote per room/queue entry/user, descending net score then insertion order, stable queue-entry IDs distinct from song IDs, and no voting on the current track. Confirm these proposed details and re-suggest/duplicate/suggestion-removal rules before treating them as final.
+>
+> **Prerequisites:** F01, F05 stable song IDs, F08 room/membership/access policy and a resolved eligibility matrix D-06. Subject defaults everyone can vote; a license may narrow eligibility to invited users or location/time. Keep any license/entitlement authorization distinct from room visibility and from the Plus subscription bonus.
+>
+> **Scope:** Implement suggest, remove only under approved policy, set/withdraw vote, authoritative ranked queue snapshot and viewer-specific `myVote`. Resolve actor from authentication. A vote request sets the user's current value and must never increment repeatedly on retry. Enforce uniqueness and score/order updates transactionally; establish deterministic insertion tie-break ordering. Queue entry ID is an occurrence; song ID identifies catalog metadata. The current track is excluded from upcoming ranking unless an approved rule states otherwise.
+>
+> **Concurrency/security:** Use a database constraint and transaction/locking strategy so simultaneous same-track and different-track votes cannot double-count or lose ranking updates. Recheck room membership, invitation/license and policy on every mutation. Handle vote/cutoff races with playback advancement in F10. Apply revisions/operation IDs and safe 409/eligibility errors from F01.
+>
+> **Tests:** Real PostgreSQL concurrency tests for repeated requests, simultaneous votes, one-user vote changes, withdraw, tie ordering and queue mutations; access tests for public/private/invited/location-time policy; current-track and ended-room restrictions; websocket committed event and resync tests. Do not use only mocked DB tests for race guarantees.
+>
+> **Acceptance:** Ranked results are stable, server-authoritative and reproducible; concurrent requests preserve invariants; viewer-only fields are not broadcast to other users; API documents score and ordering semantics, eligibility and conflict errors.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and relevant voting/realtime docs as needed. Do not invent geofence values or claim GPS anti-spoofing; report exact tests/results and unresolved policy decisions.
+
+### F10 — Coordinate host-authoritative playback state
+
+**Copy-paste prompt**
+
+> You are implementing Cuevo's host-authoritative playback coordination. Agreed handoff rule: only the host phone plays audio, optionally through a speaker; participant phones suggest/vote and observe shared state but do not play synchronized audio. The backend is authoritative for playback state, but no music provider/SDK, playable catalog mapping or host-disconnect behavior has been selected.
+>
+> **Prerequisites:** F01, F08 room lifecycle, F09 ranked queue, and explicit D-08 decisions for provider identity/SDK, playable IDs, host availability, transfer/timeout, end/restart and completion acknowledgment. If provider decisions are still open, implement only the agreed provider-neutral state contract and clearly mark actual audio playback incomplete; do not claim end-to-end readiness.
+>
+> **Scope:** Provide host-authorized play/pause/seek/skip/remove/end commands and a versioned playback snapshot with current queue-entry ID, status, positionMs, serverTime and revision (or the approved equivalent). Require expected revision/transition or idempotency IDs. A completion/skip retry must not advance twice; client clocks may animate elapsed time but cannot advance tracks authoritatively. Publish state after transaction commit. Include explicit idle/empty/ended behavior.
+>
+> **Security/correctness:** Only the current authorized host can issue playback commands. Recheck host/session validity on each request and subscription. Reject stale transition/completion events and handle provider errors without falsely marking a track as playing. Do not add synchronized participant audio or infer a playable asset from catalog artwork metadata.
+>
+> **Tests and acceptance:** Test host/non-host permissions, stale revision, duplicate completion, concurrent skip/completion, empty queue, ended room, host session revocation and realtime state ordering. Jointly demonstrate the selected provider on a real phone before calling provider playback complete; record device/OS/provider/account prerequisites and failure behavior.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and playback/realtime docs as needed. Do not select a provider, billable account or client integration without approval; report exact commands/results and remaining blockers.
+
+### F11 — Complete security, mobile-action logging, CI and load evidence
+
+**Copy-paste prompt**
+
+> You are completing cross-cutting mandatory security, audit/action logging, CI and performance evidence for Cuevo's backend. This work supplements feature-level tests; it must not substitute for them. The Music Room subject V.6 requires protecting user data and backend logs for every mobile action with platform, device and application version; V.7 requires a measured capacity estimate and server characteristics; V.8 requires tests/continuous integration and secret-safe configuration.
+>
+> **Prerequisites:** F00–F10 are implemented to their accepted contracts. Resolve D-01 (whether the selected two services or all three must be included in load tests) and document the actual tested scope. Select and record the deployment/test topology and supported Python/PostgreSQL versions.
+>
+> **Scope:** Add or complete authenticated, validated client-action ingestion with bounded payloads and server actor/request IDs; define coverage so every mobile action is represented without treating client metadata as trusted. Redact passwords, verification/reset codes, access/refresh/provider tokens, raw payment details and other secrets from application/security logs. Add CI for backend tests/lint/type checks already supported by the repository, using isolated PostgreSQL where required. Verify clean-clone dependency/setup/migration instructions and safe production configuration. Build a repeatable load scenario for authenticated actions, simultaneous votes, playlist edits and WebSocket fan-out/reconnect.
+>
+> **Measurement:** Record CPU, RAM, OS, topology, database, dataset, duration, concurrent clients, throughput, latency percentiles, errors and resource saturation. Report measured limits and test methodology; do not promise a capacity number without results or extrapolate beyond the environment. Confirm rate-limit and abuse protections under concurrent load. Do not add Redis/brokers solely to improve a synthetic result.
+>
+> **Tests/acceptance:** Cross-account and object-level authorization suite across HTTP/search/WebSockets/images/notifications; brute-force/session replay/rate limit checks; action-log completeness/redaction; fresh-database migration; CI run; and repeatable load results. Report exact commands, test data, environment and failures. Acceptance requires all mandatory feature criteria to pass and the test report to distinguish verified evidence from unrun tests.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and security/operations/testing docs as needed. No secrets, production data or unrelated refactors; report changed files and exact results.
+
+## 8. Bonus implementation prompts — only after mandatory acceptance
+
+Do not begin these while any mandatory requirement is incomplete or malfunctioning. The subject's VI.4 says bonuses will not be evaluated unless every mandatory requirement is complete and working.
+
+### B01 — Add free/paid offers and server entitlements
+
+**Copy-paste prompt**
+
+> You are implementing the optional Free/Plus subscription and entitlement bonus for Cuevo, only after the mandatory backend passes its acceptance gates. The handoff reports a Plus display price of 99 DH but explicitly says it is not an approved price/currency/tax/benefit catalog; no real payment provider or charging is selected. Subject VI.3 (p.12) permits some features to be paid-only, while the handoff says mandatory defaults must remain usable. Resolve D-03/D-15 with the product/evaluator before gating any feature.
+>
+> **Prerequisites:** All mandatory requirements are accepted; approved offer identifiers, currency/amount units, billing period, benefits, start/end/effective dates, expiry, downgrade/cancel behavior, badge semantics and decision on real billing. Keep email verification separate from subscription status.
+>
+> **Scope:** Persist offers and account entitlements; document offer listing/current status and approved switch/cancel operations; enforce approved entitlements server-side on each gated operation. If real billing is not approved, implement only non-payment entitlement switching for test/demo accounts. If billing is approved, use provider tokenization/references, verify signed webhooks and make renewal/refund/activation idempotent. Never store or log raw PAN/CVV; masked local UI summaries do not prove a card or subscription.
+>
+> **Tests/acceptance:** Test Free/Plus transitions, expiration/downgrade, unauthorized gated actions, mandatory access according to D-03, duplicate/out-of-order webhook events if billing is included, and secret/card-data redaction. Acceptance requires server-derived entitlement state and documented demo switches; no real charge is claimed unless verified with an approved provider sandbox.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and subscription/security docs as needed. Do not start before mandatory completion, add a payment SDK/provider without approval, or commit payment credentials. Report exact tests/results and all out-of-scope billing behavior.
+
+### B02 — Add versioned offline synchronization APIs
+
+**Copy-paste prompt**
+
+> You are implementing the optional backend synchronization contract for Cuevo's offline bonus. Subject VI.4 (pp.12–13) requires planning for conflicts/concurrency and obsolete mobile data; it does not prescribe which actions work offline. The handoff reports account-scoped SQLite playlist snapshots with server revision/cache time, but no durable pending-edit queue or reconciliation behavior. This task is backend only; do not implement the mobile cache or offline UX.
+>
+> **Prerequisites:** Mandatory features are accepted; F07 revisions and idempotency are stable; D-14 defines allowed cached data/actions, account-switch/logout cleanup, read-only versus queued edits, operation types, base revision, retention and conflict UX.
+>
+> **Scope:** Provide authorized snapshot/revision fetch and, only if approved, bounded operation replay carrying operation ID, resource ID, base revision, type/payload and client timestamp. Deduplicate replay safely, reauthorize at replay time, validate operations against current state, and return committed revision or explicit conflict/rejection. Never blindly replace a server playlist with cached JSON. Define stale snapshot behavior and protect private data after access revocation.
+>
+> **Tests/acceptance:** Test duplicate replay, out-of-order operations, stale revisions, simultaneous online/offline edits, revoked membership, account isolation, malformed/oversized payloads, retention expiration and deterministic conflict responses. Acceptance requires reproducible sync examples and proof that replay cannot bypass current authorization or overwrite newer state silently.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and offline/sync docs as needed. Do not edit frontend SQLite code; report exact tests/results and any unsupported offline operation.
+
+### B03 — Evaluate and optionally implement nearby IoT room lookup
+
+**Copy-paste prompt**
+
+> You are handling the optional IoT/proximity bonus for Cuevo. Subject VI.2 (p.12) calls for reflection and gives iBeacon-like nearby discovery as an example; the handoff reports only simulated nearby fixtures and proposes identifier-to-room lookup. First deliver a short feasibility/security decision in backend documentation; do not mistake simulated results for real BLE support.
+>
+> **Prerequisites:** Mandatory requirements are accepted. Product/team has chosen whether to implement proximity; D-16 approves identifier format/ownership, registration, rotation/expiry, room privacy, rate limits, mobile permissions/background behavior and actual device validation. The frontend teammate owns native broadcasting/detection and real-device UI tests.
+>
+> **Scope if implementation is approved:** Add only the authenticated backend registration/lookup/authorization needed to resolve a beacon identifier to a minimal accessible public-room summary. Keep proximity separate from authentication, room membership and voting eligibility. Proximity alone never grants private-room access. Define rotation/revocation and prevent identifier enumeration or replay according to approved policy.
+>
+> **Tests/acceptance:** Test valid/expired/revoked identifiers, unauthorized/private room filtering, rate limits, enumeration/replay attempts and minimal response fields. The bonus is not complete until the native detector/broadcaster is demonstrated on target hardware and the API lookup is jointly tested; fixture results do not qualify.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and IoT/security docs as needed. Do not implement mobile BLE code or invent identifiers/crypto policy; report reflection findings, exact tests and device evidence separately.
+
+### B04 — Prepare the backend for a responsive web client
+
+**Copy-paste prompt**
+
+> You are preparing Cuevo's existing backend for the optional responsive web client described in subject VI.1 (p.12). This is backend compatibility work only; the frontend teammate owns web UI. The web client must use the same API, IDs, authorization and realtime behavior—do not create a second backend.
+>
+> **Prerequisites:** All mandatory requirements are accepted and the team has selected a web origin and browser authentication transport. Resolve D-11's browser session, cookie, CSRF, CORS and allowed-origin behavior before configuration. Do not enable wildcard credentialed CORS or place bearer tokens in URLs.
+>
+> **Scope:** Add only required server-side browser-origin and authentication support, with explicit production allowlists, safe cookie attributes if cookie sessions are chosen, CSRF protections for cookie-authenticated mutations, and WebSocket origin/session checks. Preserve native bearer behavior. Document deployment variables as safe names/placeholders and ensure development origins are distinct from production.
+>
+> **Tests/acceptance:** Test allowed/disallowed origins, preflight behavior, credential handling, CSRF rejection where applicable, websocket origin/authentication, session expiry/revocation and regression of native API behavior. Acceptance is backend browser compatibility only; do not claim a responsive web app until the separate client is implemented and tested.
+>
+> **Execution constraints:** Follow the shared execution rules in the plan. Update global README, backend README and deployment/auth docs as needed. Do not add a web framework or loosen CORS for convenience; report exact tests/results and approved origins/transport without exposing secrets.
+
+## 9. Dependency and completion summary
+
+### Mandatory path
+
+`F00 → F01 → F02; then F03 (when approved) and F04 + F05; then F06 → F07 + F08 → F09 → F10 → F11`
+
+- F04 and F05 can proceed in parallel once F00/F01 and shared account/API conventions are stable, with coordinated migrations.
+- F07 and F08 can proceed in parallel after shared invitations/notification and realtime conventions are agreed; avoid simultaneous unreviewed changes to common models/migrations.
+- F09 requires room access, catalog IDs and an approved voting-policy matrix.
+- F10 requires F09 plus an explicit playback/provider contract and real-phone proof.
+- F11 is a cross-cutting acceptance gate, but authorization, privacy, error handling, migration and tests must be implemented in each feature rather than deferred to F11.
+
+### Bonus path
+
+Only after all mandatory requirements are demonstrated as complete and functioning: `B01`, `B02`, `B03`, and `B04` can be prioritized independently once their own decisions/prerequisites are approved. B02 depends on stable revisions/idempotency; B03 depends on device feasibility and room privacy; B04 depends on browser auth/origin decisions. Optional push notifications remain outside the required plan unless the team explicitly adds them.
+
+### Definition of a ready slice
+
+A slice is not frontend-ready just because its endpoint returns HTTP 200. It is ready only when its agreed OpenAPI/error/event contract, authorization and privacy behavior, migration path, focused automated tests, exact verification results, safe configuration, deterministic demo procedure and known limitations are documented and reviewed with the frontend teammate. Record unverified live PostgreSQL, provider, device, browser or load checks explicitly; do not claim them complete.

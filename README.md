@@ -38,6 +38,14 @@ Mac setup is complete; the current UI has been previewed in Expo Go on the iPhon
 - [Cuevo backend setup and migrations](backend/README.md)
 - [Project subject](en.subject.pdf)
 
+## Backend foundation
+
+The backend foundation is separate from the mobile UI and uses Python 3.12,
+FastAPI and PostgreSQL. Follow the
+[backend setup and verification guide](backend/README.md) before making backend
+or database changes; the current migration does not add account or
+product-domain tables.
+
 ## Checks
 
 Run inside `mobile/`:

@@ -8,7 +8,9 @@ from app.core.config import Settings, get_settings
 
 def create_db_engine(settings: Settings) -> Engine:
     url = settings.database_url
-    if settings.environment == "test" and settings.test_database_url:
+    if settings.environment == "test":
+        if settings.test_database_url is None:
+            raise ValueError("TEST_DATABASE_URL is required when ENVIRONMENT=test")
         url = settings.test_database_url
     return create_engine(url, pool_pre_ping=True)
 
