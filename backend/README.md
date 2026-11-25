@@ -65,6 +65,17 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 OpenAPI is available at `http://127.0.0.1:8000/docs`.
 
+## Proposed API conventions
+
+The backend exposes a shared error envelope and request ID for API failures.
+Generated OpenAPI includes examples and machine-readable proposals for future
+product APIs; no product routes or mobile fetch integration are added yet.
+Product route/DTO proposals, JSON casing, IDs, timestamps, pagination,
+revision/idempotency requirements, viewer permissions and the WebSocket event
+envelope still require frontend review. See the
+[proposed API contract](docs/api-contract.md) for status mappings, privacy-safe
+404 behavior, redaction rules, and unresolved decisions.
+
 ## Environment variables
 
 | Variable | Required | Purpose |

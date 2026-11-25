@@ -52,6 +52,7 @@ def test_app_starts_and_health_is_ready() -> None:
         "api": "ready",
         "database": "ready",
     }
+    assert response.headers["X-Request-ID"]
 
 
 def test_health_returns_503_when_database_is_unavailable() -> None:
@@ -72,4 +73,5 @@ def test_health_returns_503_when_database_is_unavailable() -> None:
 
     assert response.status_code == 503
     assert response.json()["database"] == "unavailable"
+    assert response.headers["X-Request-ID"]
     assert "sensitive-test-password" not in response.text

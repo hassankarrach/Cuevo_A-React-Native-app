@@ -45,6 +45,10 @@ FastAPI and PostgreSQL. Follow the
 [backend setup and verification guide](backend/README.md) before making backend
 or database changes; the current migration does not add account or
 product-domain tables.
+The proposed shared HTTP, error and WebSocket conventions are documented in
+the [backend API contract](backend/docs/api-contract.md) and are pending
+frontend review; they do not represent mobile integration or implemented
+product routes.
 
 ## Checks
 
