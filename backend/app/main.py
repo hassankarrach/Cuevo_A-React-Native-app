@@ -10,10 +10,15 @@ from app.api.errors import (
     unexpected_error_response,
 )
 from app.api.routes.health import router as health_router
+from app.api.routes.auth import router as auth_router
+from app.auth.email import EmailDelivery, SMTPEmailDelivery
 from app.core.config import Settings, get_settings
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    email_delivery: EmailDelivery | None = None,
+) -> FastAPI:
     config = settings or get_settings()
     app = FastAPI(
         title="Cuevo API",
@@ -24,6 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version="0.1.0",
     )
     app.state.settings = config
+    app.state.email_delivery = email_delivery or SMTPEmailDelivery(config)
 
     @app.middleware("http")
     async def request_id_middleware(
@@ -51,6 +57,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     register_exception_handlers(app)
     install_openapi_contract(app)
     app.include_router(health_router)
+    app.include_router(auth_router)
     return app
 
 

@@ -10,6 +10,7 @@ from app.main import create_app
 
 def build_client() -> TestClient:
     settings = Settings(
+        auth_secret_key="test-only-auth-secret-key-not-for-production",
         environment="test",
         database_url="postgresql+psycopg://cuevo:local@localhost:5432/cuevo_dev",
         test_database_url="postgresql+psycopg://cuevo:local@localhost:5432/cuevo_test",
@@ -178,6 +179,12 @@ def test_openapi_contains_error_and_websocket_contract_examples() -> None:
     ]["examples"]["VALIDATION_ERROR"]["value"]["error"]["fieldErrors"]
     assert "X-Request-ID" in schema["components"]["responses"]["RateLimited"]["headers"]
     assert "Retry-After" in schema["components"]["responses"]["RateLimited"]["headers"]
+    assert schema["paths"]["/api/v1/auth/register"]["post"]["responses"]["201"]
+    assert schema["paths"]["/api/v1/me"]["get"]["security"] == [{"BearerAuth": []}]
+    assert schema["components"]["securitySchemes"]["BearerAuth"] == {
+        "type": "http",
+        "scheme": "bearer",
+    }
     assert "X-Request-ID" in schema["paths"]["/health"]["get"]["responses"]["200"][
         "headers"
     ]

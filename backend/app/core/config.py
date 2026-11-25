@@ -1,7 +1,8 @@
+from ipaddress import ip_address
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -13,6 +14,10 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     database_url: str = Field(min_length=1)
     test_database_url: str | None = None
+    auth_secret_key: SecretStr = Field(min_length=32)
+    email_smtp_host: str = "127.0.0.1"
+    email_smtp_port: int = Field(default=1025, ge=1, le=65535)
+    email_from_address: str = "no-reply@cuevo.local"
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
@@ -35,8 +40,25 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL and TEST_DATABASE_URL must be PostgreSQL URLs")
         return value
 
+    @field_validator("email_smtp_host")
+    @classmethod
+    def require_local_email_smtp(cls, value: str) -> str:
+        if value.lower() == "localhost":
+            return value
+        try:
+            address = ip_address(value)
+        except ValueError as exc:
+            raise ValueError("EMAIL_SMTP_HOST must be a loopback address") from exc
+        if not address.is_loopback:
+            raise ValueError("EMAIL_SMTP_HOST must be a loopback address")
+        return value
+
     @model_validator(mode="after")
     def require_isolated_test_database(self) -> "Settings":
+        if self.environment == "production":
+            raise ValueError(
+                "Production email delivery is not configured; approve a delivery adapter"
+            )
         if self.environment != "test":
             return self
         if self.test_database_url is None:

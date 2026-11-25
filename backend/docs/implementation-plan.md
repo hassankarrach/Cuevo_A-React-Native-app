@@ -32,6 +32,18 @@ The requested `backend/docs/implementation-plan.md` had been deleted in the work
 - **Agreed handoff exception:** The frontend developer contributes the **profiles/friendships backend feature**, with backend teammate review. First agree account IDs, authentication dependencies, database conventions and migration ownership; do not create competing profile/friend models.
 - **Shared:** API/error/event contracts, policy decisions, provider and playback choices, acceptance demonstrations, and later real-client integration testing.
 
+### Current implementation update (2026-11-25)
+
+F02 now implements email/password registration, verification, login, opaque
+access and rotating refresh sessions, logout, reset/change-password, and
+resumable account onboarding state. The auth-specific policy decisions
+originally listed under D-10 and D-11 were resolved for this slice and are
+recorded in [`auth-lifecycle.md`](./auth-lifecycle.md); production email
+delivery remains blocked pending an approved adapter. The slice passed 31
+tests on Python 3.13.1 with real PostgreSQL integration and a fresh Alembic
+migration check. Mobile integration and profile/friendship data ownership
+remain out of scope.
+
 ## 2. Requirement inventory and traceability
 
 “Feature” references point to the ordered prompts in §7. Classification is the subject/handoff classification, not a claim that the backend already implements it.

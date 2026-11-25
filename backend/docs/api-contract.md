@@ -1,11 +1,12 @@
 # Proposed shared API contract
 
-This document records proposed conventions for frontend review. Product routes,
-DTOs, exact authentication transport, resource-specific rules, and the
-WebSocket delivery guarantees are not approved merely because they appear here
-or in generated OpenAPI. No product routes are implemented by this contract
-slice. Preserve `GET /health`; it remains outside the proposed `/api/v1`
-product namespace and retains its current readiness response.
+This document records shared conventions for frontend review. The F01 contract
+slice implements the common error envelope; the email/password account routes
+are implemented separately under `/api/v1` and documented in the
+[auth lifecycle contract](./auth-lifecycle.md). other product routes, DTOs, resource-specific rules, and WebSocket delivery
+guarantees are not approved merely because they appear here or in generated
+OpenAPI. Preserve `GET /health`; it remains outside the `/api/v1` product
+namespace and retains its current readiness response.
 
 ## HTTP and JSON conventions
 
@@ -66,12 +67,12 @@ existence.
 | Other framework HTTP status | `HTTP_ERROR` | The request could not be completed. |
 
 `Retry-After` may be returned for a `429` when the server has a safe retry
-delay. The exact authentication challenge/header, rate-limit policy, and
-resource-specific catalog are pending approval. Suggested domain codes from
-the handoff (such as `INVALID_CREDENTIALS`, `EMAIL_NOT_VERIFIED`,
-`ROOM_ENDED`, `VOTING_NOT_ELIGIBLE`, and `PROVIDER_UNAVAILABLE`) remain
-proposals. Do not expose account-enumeration details unless the product
-security policy explicitly permits them.
+delay. The auth challenge, `Authorization: Bearer` header, auth rate limits,
+and auth-specific error codes are approved for F02 and documented in the
+[auth lifecycle contract](./auth-lifecycle.md). Other resource-specific
+catalog entries (such as `ROOM_ENDED`, `VOTING_NOT_ELIGIBLE`, and
+`PROVIDER_UNAVAILABLE`) remain proposals. Do not expose account-enumeration
+details unless the product security policy explicitly permits them.
 
 The `requestId` in the envelope is also sent as `X-Request-ID`. A canonical
 UUID supplied in `X-Request-ID` is accepted as a correlation ID; malformed
@@ -84,6 +85,12 @@ tracebacks. `Retry-After`, when supplied for `429`, is expressed in seconds.
 `GET /health` is intentionally an exception to the general 503 error envelope:
 its existing 503 payload describes database readiness and remains unchanged.
 The middleware still adds `X-Request-ID` to health responses.
+
+The email/password account slice uses `Authorization: Bearer` with opaque,
+server-tracked access tokens. Its error codes, expiry, rotation, replay, and
+rate-limit policies are specified in the
+[auth lifecycle contract](./auth-lifecycle.md). Authentication behavior for
+other product routes remains subject to their own reviewed contracts.
 
 ## Proposed WebSocket event envelope
 

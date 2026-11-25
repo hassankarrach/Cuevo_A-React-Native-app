@@ -3,6 +3,7 @@ from collections.abc import Generator
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api.errors import APIError
 from app.core.config import Settings, get_settings
 
 
@@ -26,4 +27,13 @@ def get_db_engine() -> Engine:
 
 def get_db() -> Generator[Session, None, None]:
     with SessionLocal() as session:
-        yield session
+        try:
+            yield session
+        except APIError:
+            session.commit()
+            raise
+        except Exception:
+            session.rollback()
+            raise
+        else:
+            session.commit()

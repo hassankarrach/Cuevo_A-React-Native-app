@@ -4,7 +4,7 @@ Cuevo combines **cue/queue + vote**: people choose what plays next and build pla
 
 A React Native music app with live track voting and collaborative playlist editing.
 
-This two-person project is in the mobile UI and mock-interaction stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. Real authentication, backend services, audio playback, realtime collaboration and production bonuses are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
+This two-person project is in the mobile UI and backend foundation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend now implements email/password account lifecycle and PostgreSQL session state, but mobile API wiring, profile/friendship data ownership, audio playback, realtime collaboration and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
 
 ## Development
 
@@ -40,11 +40,12 @@ Mac setup is complete; the current UI has been previewed in Expo Go on the iPhon
 
 ## Backend foundation
 
-The backend foundation is separate from the mobile UI and uses Python 3.12,
-FastAPI and PostgreSQL. Follow the
-[backend setup and verification guide](backend/README.md) before making backend
-or database changes; the current migration does not add account or
-product-domain tables.
+The backend is separate from the mobile UI and uses FastAPI and PostgreSQL.
+Follow the [backend setup and verification guide](backend/README.md) before
+making backend or database changes. The email/password account lifecycle and
+its account/session migration are documented in the
+[auth lifecycle guide](backend/docs/auth-lifecycle.md); this does not wire
+mobile credentials or implement profile/friendship ownership.
 The proposed shared HTTP, error and WebSocket conventions are documented in
 the [backend API contract](backend/docs/api-contract.md) and are pending
 frontend review; they do not represent mobile integration or implemented

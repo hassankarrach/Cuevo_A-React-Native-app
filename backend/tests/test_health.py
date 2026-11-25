@@ -5,6 +5,9 @@ from app.db.session import get_db_engine
 from app.main import create_app
 
 
+AUTH_SECRET_KEY = "test-only-auth-secret-key-not-for-production"
+
+
 TEST_DATABASE_URL = (
     "postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_test"
 )
@@ -38,6 +41,7 @@ def test_app_starts_and_health_is_ready() -> None:
             "postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_dev"
         ),
         test_database_url=TEST_DATABASE_URL,
+        auth_secret_key=AUTH_SECRET_KEY,
         _env_file=None,
     )
     app = create_app(settings)
@@ -63,6 +67,7 @@ def test_health_returns_503_when_database_is_unavailable() -> None:
                 "postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_dev"
             ),
             test_database_url=TEST_DATABASE_URL,
+            auth_secret_key=AUTH_SECRET_KEY,
             _env_file=None,
         )
     )
