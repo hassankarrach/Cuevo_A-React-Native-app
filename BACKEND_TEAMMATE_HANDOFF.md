@@ -379,7 +379,7 @@ Existing scope, host-only audio and deferred fetch integration do not need reope
 | API conventions | Final OpenAPI, errors, pagination, ID/revision schemas | Adapter review and UI field/error needs |
 | Sessions | Access/refresh lifetimes, rotation, revoke/reuse rules | Native secure-storage and renewal behavior during integration |
 | Email challenges | Delivery adapter, attempt limits, expiry/cooldown contract | Confirm six-digit UI and display server timers |
-| Google | Accepted credential/audience contract and server validation | Native OAuth client configuration/redirect setup; exchange securely |
+| Google | Native ID-token audience verification, account-collision and link/unlink contract | Native iOS SDK wiring and secure exchange; use the approved client IDs and configuration in [the auth lifecycle guide](backend/docs/auth-lifecycle.md), not browser OAuth or redirect flow |
 | Profiles/friends | Shared account/auth/schema conventions and review | Bounded feature implementation per agreed ownership; username/privacy contract review |
 | Avatar upload | Upload flow, limits, storage and URL lifecycle | Image-picker payload capabilities and failure UX |
 | Verified badge | Distinct account status fields | Product meaning of badge |

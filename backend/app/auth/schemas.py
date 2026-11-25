@@ -91,6 +91,47 @@ class PasswordChangeRequest(AuthModel):
         return self
 
 
+class GoogleSignInRequest(AuthModel):
+    id_token: str = Field(
+        min_length=1,
+        max_length=8192,
+        description="Google ID token obtained by native iOS Google Sign-In.",
+        examples=["<google-id-token-from-ios>"],
+    )
+
+
+class GoogleLinkRequest(AuthModel):
+    id_token: str = Field(
+        min_length=1,
+        max_length=8192,
+        description="Google ID token obtained by native iOS Google Sign-In.",
+        examples=["<google-id-token-from-ios>"],
+    )
+    current_password: str = Field(min_length=1, max_length=128)
+
+
+class GoogleUnlinkRequest(AuthModel):
+    current_password: str | None = Field(default=None, min_length=1, max_length=128)
+    id_token: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=8192,
+        description="Use instead of currentPassword when reauthenticating with Google.",
+        examples=["<google-id-token-from-ios>"],
+    )
+
+    @model_validator(mode="after")
+    def require_one_reauthentication_method(self) -> "GoogleUnlinkRequest":
+        if (self.current_password is None) == (self.id_token is None):
+            raise ValueError("Provide exactly one reauthentication method")
+        return self
+
+
+class LinkedAuthMethodsResponse(AuthModel):
+    password_enabled: bool
+    google_linked: bool
+
+
 class AccountState(AuthModel):
     id: UUID
     email: EmailStr

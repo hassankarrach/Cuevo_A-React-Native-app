@@ -33,6 +33,7 @@ Mac setup is complete; the current UI has been previewed in Expo Go on the iPhon
 
 - [Local setup and Mac handoff](doc/LOCAL_DEVELOPMENT.md)
 - [Current session handoff and next steps](doc/SESSION_HANDOFF.md)
+- [Google Sign-In frontend handoff](FRONTEND_TEAMMATE_HANDOFF.md)
 - [Project plan and requirements](doc/PROJECT_PLAN.md)
 - [Team responsibilities](doc/TEAM_RESPONSIBILITIES.md)
 - [Cuevo backend setup and migrations](backend/README.md)
@@ -45,7 +46,11 @@ Follow the [backend setup and verification guide](backend/README.md) before
 making backend or database changes. The email/password account lifecycle and
 its account/session migration are documented in the
 [auth lifecycle guide](backend/docs/auth-lifecycle.md); this does not wire
-mobile credentials or implement profile/friendship ownership.
+mobile credentials or implement profile/friendship ownership. Google native
+ID-token verification and explicit account linking are implemented in the
+backend and documented in the [auth lifecycle guide](backend/docs/auth-lifecycle.md).
+The current checkout contains no iOS project or mobile source, so native SDK
+integration remains a client-side task. Facebook is not supported.
 The proposed shared HTTP, error and WebSocket conventions are documented in
 the [backend API contract](backend/docs/api-contract.md) and are pending
 frontend review; they do not represent mobile integration or implemented

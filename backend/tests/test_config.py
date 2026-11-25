@@ -63,6 +63,19 @@ def test_development_and_test_databases_are_separate() -> None:
     test_engine.dispose()
 
 
+def test_google_client_ids_are_optional_and_trimmed() -> None:
+    settings = Settings(
+        database_url=DEVELOPMENT_DATABASE_URL,
+        auth_secret_key=AUTH_SECRET_KEY,
+        google_ios_client_id=" ios-client ",
+        google_server_client_id="   ",
+        _env_file=None,
+    )
+
+    assert settings.google_ios_client_id == "ios-client"
+    assert settings.google_server_client_id is None
+
+
 def test_postgres_url_is_normalized() -> None:
     settings = Settings(
         auth_secret_key=AUTH_SECRET_KEY,

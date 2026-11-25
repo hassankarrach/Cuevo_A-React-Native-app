@@ -95,7 +95,12 @@ The backend exposes F01's shared error envelope and request ID. The
 email/password account lifecycle is implemented under `/api/v1`; its routes,
 DTOs, approved challenge/session rules, errors, rate limits and examples are
 documented in the [auth lifecycle contract](docs/auth-lifecycle.md). It is not
-wired to mobile screens or credential storage. Other product routes and
+wired to mobile screens or credential storage. Google native ID-token
+verification, sign-in and explicit account link/unlink are implemented under
+`/api/v1`; configure the optional public Google client IDs in `.env` to enable
+them. The current checkout contains no iOS project or mobile source, so
+native SDK integration remains a client-side task. Facebook is not supported.
+Other product routes and
 shared proposals for pagination, revisions, viewer permissions and WebSocket
 delivery still require review. See the [API contract](docs/api-contract.md)
 for the shared envelope and remaining approval boundaries.
@@ -111,6 +116,8 @@ for the shared envelope and remaining approval boundaries.
 | `EMAIL_SMTP_HOST` | No | Local SMTP host; defaults to `127.0.0.1` |
 | `EMAIL_SMTP_PORT` | No | Local SMTP port; defaults to `1025` |
 | `EMAIL_FROM_ADDRESS` | No | Local message sender; defaults to `no-reply@cuevo.local` |
+| `GOOGLE_IOS_CLIENT_ID` | No | Public iOS OAuth client ID used to validate Google `azp` when present |
+| `GOOGLE_SERVER_CLIENT_ID` | No | Public server OAuth client ID used as the Google ID-token audience |
 
 Example values in `.env.example` contain development-only placeholder
 credentials. The application fails startup configuration if `DATABASE_URL` is
@@ -162,8 +169,9 @@ alembic downgrade -1
 ```
 
 The initial `0001_initial` migration establishes migration metadata only;
-`0002_account_auth` adds the account/authentication tables. To apply the
-migrations to the isolated test database, set
+`0002_account_auth` adds the email/password account/authentication tables and
+`0003_google_identity` adds provider identity mappings and allows passwordless
+Google accounts. To apply the migrations to the isolated test database, set
 `DATABASE_URL` to `cuevo_dev`, `TEST_DATABASE_URL` to `cuevo_test`, and run
 `ENVIRONMENT=test alembic upgrade head`.
 

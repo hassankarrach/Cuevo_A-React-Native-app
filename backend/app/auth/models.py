@@ -35,7 +35,7 @@ class Account(Base):
 
     id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
     email: Mapped[str] = mapped_column(String(254), nullable=False)
-    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     email_verified_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -52,6 +52,44 @@ class Account(Base):
     sessions: Mapped[list["AuthSession"]] = relationship(
         back_populates="account", cascade="all, delete-orphan"
     )
+    identities: Mapped[list["AuthIdentity"]] = relationship(
+        back_populates="account", cascade="all, delete-orphan"
+    )
+
+
+class AuthIdentity(Base):
+    __tablename__ = "auth_identities"
+    __table_args__ = (
+        CheckConstraint(
+            "length(provider) BETWEEN 1 AND 32",
+            name="ck_auth_identities_provider_length",
+        ),
+        UniqueConstraint(
+            "provider",
+            "subject",
+            name="uq_auth_identities_provider_subject",
+        ),
+        UniqueConstraint(
+            "account_id",
+            "provider",
+            name="uq_auth_identities_account_provider",
+        ),
+    )
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    account_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    account: Mapped[Account] = relationship(back_populates="identities")
 
 
 class AuthChallenge(Base):

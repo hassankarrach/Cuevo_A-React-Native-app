@@ -1,3 +1,4 @@
+from typing import Callable
 from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Request
@@ -12,12 +13,15 @@ from app.api.errors import (
 from app.api.routes.health import router as health_router
 from app.api.routes.auth import router as auth_router
 from app.auth.email import EmailDelivery, SMTPEmailDelivery
+from app.auth.google import VerifiedGoogleIdentity, verify_google_id_token
 from app.core.config import Settings, get_settings
 
 
 def create_app(
     settings: Settings | None = None,
     email_delivery: EmailDelivery | None = None,
+    google_token_verifier: Callable[[str, str, str], VerifiedGoogleIdentity]
+    | None = None,
 ) -> FastAPI:
     config = settings or get_settings()
     app = FastAPI(
@@ -30,6 +34,7 @@ def create_app(
     )
     app.state.settings = config
     app.state.email_delivery = email_delivery or SMTPEmailDelivery(config)
+    app.state.google_token_verifier = google_token_verifier or verify_google_id_token
 
     @app.middleware("http")
     async def request_id_middleware(

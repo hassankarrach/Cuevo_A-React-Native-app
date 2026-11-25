@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     email_smtp_host: str = "127.0.0.1"
     email_smtp_port: int = Field(default=1025, ge=1, le=65535)
     email_from_address: str = "no-reply@cuevo.local"
+    google_ios_client_id: str | None = None
+    google_server_client_id: str | None = None
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
@@ -52,6 +54,14 @@ class Settings(BaseSettings):
         if not address.is_loopback:
             raise ValueError("EMAIL_SMTP_HOST must be a loopback address")
         return value
+
+    @field_validator("google_ios_client_id", "google_server_client_id")
+    @classmethod
+    def normalize_optional_google_client_id(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        normalized = value.strip()
+        return normalized or None
 
     @model_validator(mode="after")
     def require_isolated_test_database(self) -> "Settings":

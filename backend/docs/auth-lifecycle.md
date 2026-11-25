@@ -24,6 +24,156 @@ session validity. JSON fields use camelCase and timestamps are UTC RFC 3339.
 keys challenge, bearer-token, and rate-limit digests. Do not log or commit it.
 Changing it invalidates issued challenges and tokens.
 
+## Google native sign-in and account linking
+
+Google is the only supported social provider. The iOS app obtains a Google ID
+token through native Google Sign-In and sends it to the API over HTTPS; the
+backend verifies its signature with Google's published signing keys, issuer,
+expiry and `aud` against `GOOGLE_SERVER_CLIENT_ID`. If `azp` is present, it
+must match `GOOGLE_IOS_CLIENT_ID`. Verified tokens must contain a Google
+subject and a verified, valid email. The token subject—not email—is the
+external identity key. Client-supplied email, name, profile data or subject
+is never used as proof. Facebook and browser-based Google authentication are
+not supported.
+
+The client IDs are public OAuth identifiers, not secrets:
+
+| Setting | Value |
+|---|---|
+| `GOOGLE_IOS_CLIENT_ID` | `699911618982-o9n9v5s8t8ebcsuqi3s24du0hjgea6t8.apps.googleusercontent.com` |
+| `GOOGLE_SERVER_CLIENT_ID` | `699911618982-tbvbceq7c04nsgnh656ifabrdt3ep7iq.apps.googleusercontent.com` |
+| iOS bundle identifier | `com.cuevo.app` |
+| iOS URL scheme | `com.googleusercontent.apps.699911618982-o9n9v5s8t8ebcsuqi3s24du0hjgea6t8` |
+
+Set the two `GOOGLE_*_CLIENT_ID` variables in the backend environment. They
+are optional at startup; if either is missing, Google endpoints return
+`503 GOOGLE_AUTH_NOT_CONFIGURED`. No Web Client Secret is required or used.
+The Web OAuth client is the native ID-token audience only; it does not imply
+a browser client.
+
+### iOS SDK setup
+
+The current checkout has no iOS project or mobile source. When integrating in
+the native app:
+
+1. Configure the Google Sign-In iOS SDK with `GIDClientID` set to the iOS
+   Client ID and `GIDServerClientID` set to the backend Web Client ID.
+2. Set the app bundle identifier to `com.cuevo.app` and register the reversed
+   iOS Client ID as a URL scheme.
+3. Use the native Google Sign-In flow to obtain the ID token. Send only that
+   token to `POST /api/v1/auth/google` over HTTPS. Do not send profile fields
+   as identity evidence or store the token as a Cuevo session credential.
+4. Store the returned Cuevo access/refresh tokens using the app's approved
+   secure credential storage. Handle `ACCOUNT_LINK_REQUIRED` by asking the
+   user to authenticate using their existing Cuevo method, then explicitly
+   link Google.
+
+Native SDK code, app plist/project edits and iOS build verification are not
+included because no native app project is present in this checkout.
+
+### Google authentication endpoints
+
+`POST /api/v1/auth/google` accepts the ID token returned by the native SDK:
+
+```json
+{
+  "idToken": "<google-id-token-from-ios>"
+}
+```
+
+The example is a placeholder, not a valid token. On success the endpoint
+returns the existing `AuthTokensResponse` shape. If the Google `sub` is
+already linked, it signs in that Cuevo account. If it is new and its verified
+email is unused, the API creates an email-verified Cuevo account with a
+Google identity and no password. If that email already belongs to an account,
+the API neither creates a duplicate nor links automatically; it returns
+`409 ACCOUNT_LINK_REQUIRED`:
+
+```json
+{
+  "error": {
+    "code": "ACCOUNT_LINK_REQUIRED",
+    "message": "Sign in with your existing method, then link Google.",
+    "requestId": "00000000-0000-4000-8000-000000000000",
+    "details": {
+      "linkRequired": true,
+      "linkEndpoint": "/api/v1/me/linked-accounts/google"
+    }
+  }
+}
+```
+
+After authenticating with the existing Cuevo method, an account with a
+password can explicitly link Google:
+
+`POST /api/v1/me/linked-accounts/google` (Bearer access token)
+
+```json
+{
+  "idToken": "<google-id-token-from-ios>",
+  "currentPassword": "<current-cuevo-password>"
+}
+```
+
+Linking requires password reauthentication and a separately verified Google
+token. A Google identity owned by another Cuevo account returns
+`409 GOOGLE_IDENTITY_IN_USE`; an already-linked identity returns
+`409 GOOGLE_ALREADY_LINKED`. No merge occurs. Successful linking returns a
+rotated token pair in the existing auth response shape, revokes all other
+active sessions, and invalidates the previous access/refresh credentials for
+the current session.
+
+`GET /api/v1/me/linked-accounts` (Bearer access token) returns:
+
+```json
+{
+  "passwordEnabled": true,
+  "googleLinked": true
+}
+```
+
+`POST /api/v1/me/linked-accounts/google/unlink` (Bearer access token) accepts
+exactly one reauthentication method:
+
+```json
+{
+  "currentPassword": "<current-cuevo-password>"
+}
+```
+
+or, when reauthenticating with the linked Google method:
+
+```json
+{
+  "idToken": "<fresh-google-id-token-from-ios>"
+}
+```
+
+Unlinking requires a remaining usable login method. A Google-only account
+receives `409 LAST_LOGIN_METHOD`; it must first establish another login
+method (for example, set a password through account recovery). ID-token
+reauthentication for unlinking requires a verified token issued within the
+previous five minutes. Successful unlinking deletes only the identity association, not the
+Cuevo account. It revokes other sessions and rotates the current session's
+access and refresh tokens. Invalid tokens return `401 INVALID_GOOGLE_TOKEN`;
+Google certificate/provider network failures return
+`503 GOOGLE_PROVIDER_UNAVAILABLE`. Google verification is mocked in automated
+tests; no live Google account or credential is needed.
+
+Apply the Google identity schema with `alembic upgrade head`. Migration
+`0003_google_identity` adds the uniquely constrained `(provider, subject)`
+identity mapping and makes the password hash nullable for Google-only
+accounts. Keep the existing F01/F02 migration and database isolation
+procedures; test migrations only against the isolated test database.
+
+Run just the Google auth tests from `backend/` with:
+
+```bash
+python -m pytest tests/test_google_auth.py tests/test_google_auth_integration.py
+```
+
+Run the complete backend suite with `python -m pytest`.
+
 ## Routes
 
 ### Register and verify
