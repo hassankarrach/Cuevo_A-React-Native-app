@@ -209,6 +209,12 @@ def test_account_onboarding_state_is_persisted_separately(auth_api) -> None:
     client, _app, delivery, _engine = auth_api
     verify_registered(client, delivery)
     session = login(client)
+    profile = client.patch(
+        "/api/v1/me/profile",
+        headers=bearer(session["accessToken"]),
+        json={"displayName": "Onboarding User", "username": "onboarding_user"},
+    )
+    assert profile.status_code == 200
     completed = client.post(
         "/api/v1/me/onboarding/profile-completed",
         headers=bearer(session["accessToken"]),
@@ -403,6 +409,7 @@ def test_challenge_expiry_attempt_cap_and_resend_cooldown(auth_api) -> None:
     )
     assert resend.status_code == 429
     assert int(resend.headers["Retry-After"]) > 0
+    assert int(resend.headers["Retry-After"]) <= 30
 
     for _ in range(5):
         response = client.post(
@@ -451,6 +458,134 @@ def test_challenge_expiry_attempt_cap_and_resend_cooldown(auth_api) -> None:
 
     with Session(engine) as db:
         assert db.scalar(select(func.count()).select_from(AuthChallenge)) == 2
+
+
+def test_resend_metadata_is_non_enumerating_and_resumable(auth_api) -> None:
+    client, _app, delivery, engine = auth_api
+    registration = register(client, "eligible@example.com")
+    with Session(engine) as db:
+        challenge = db.get(AuthChallenge, registration["challengeId"])
+        assert challenge is not None
+        challenge.resend_available_at = datetime.now(UTC) - timedelta(seconds=1)
+        db.commit()
+
+    eligible = client.post(
+        "/api/v1/auth/email/resend",
+        json={"email": "eligible@example.com"},
+    )
+    assert eligible.status_code == 202
+    assert set(eligible.json()) == {
+        "accepted",
+        "message",
+        "challengeId",
+        "expiresAt",
+        "resendAvailableAt",
+    }
+    assert eligible.json()["accepted"] is True
+    assert eligible.json()["message"] == (
+        "If the account can receive a verification email, instructions will be sent."
+    )
+    assert eligible.json()["challengeId"] != registration["challengeId"]
+    assert delivery.messages[-1].challenge_id == eligible.json()["challengeId"]
+    assert datetime.fromisoformat(
+        delivery.messages[-1].expires_at
+    ) == datetime.fromisoformat(eligible.json()["expiresAt"])
+    assert datetime.fromisoformat(eligible.json()["expiresAt"]) > datetime.fromisoformat(
+        eligible.json()["resendAvailableAt"]
+    )
+    with Session(engine) as db:
+        replacement = db.get(AuthChallenge, eligible.json()["challengeId"])
+        assert replacement is not None
+        assert replacement.expires_at == datetime.fromisoformat(
+            eligible.json()["expiresAt"]
+        )
+        assert replacement.resend_available_at == datetime.fromisoformat(
+            eligible.json()["resendAvailableAt"]
+        )
+
+    replacement_id = eligible.json()["challengeId"]
+    new_code = delivery.messages[-1].code
+    old_code = delivery.messages[0].code
+    old_id_attempt = client.post(
+        "/api/v1/auth/email/verify",
+        json={
+            "email": "eligible@example.com",
+            "challengeId": registration["challengeId"],
+            "code": new_code,
+        },
+    )
+    assert old_id_attempt.status_code == 400
+    wrong_code_attempt = client.post(
+        "/api/v1/auth/email/verify",
+        json={
+            "email": "eligible@example.com",
+            "challengeId": replacement_id,
+            "code": old_code,
+        },
+    )
+    assert wrong_code_attempt.status_code == 400
+    verified = client.post(
+        "/api/v1/auth/email/verify",
+        json={
+            "email": "eligible@example.com",
+            "challengeId": replacement_id,
+            "code": new_code,
+        },
+    )
+    assert verified.status_code == 200
+    assert verified.json()["emailVerified"] is True
+
+    verified_registration = register(client, "already-verified@example.com")
+    verified_account = client.post(
+        "/api/v1/auth/email/verify",
+        json={
+            "email": "already-verified@example.com",
+            "challengeId": verified_registration["challengeId"],
+            "code": delivery.messages[-1].code,
+        },
+    )
+    assert verified_account.status_code == 200
+    already_verified = client.post(
+        "/api/v1/auth/email/resend",
+        json={"email": "already-verified@example.com"},
+    )
+    unknown = client.post(
+        "/api/v1/auth/email/resend",
+        json={"email": "unknown@example.com"},
+    )
+    assert already_verified.status_code == unknown.status_code == 202
+    assert set(already_verified.json()) == set(unknown.json()) == set(eligible.json())
+    assert already_verified.json()["message"] == unknown.json()["message"]
+    assert "account" not in already_verified.json()
+    assert "maskedEmail" not in already_verified.json()
+    assert "account" not in unknown.json()
+    assert "maskedEmail" not in unknown.json()
+    for response in (already_verified, unknown):
+        created_at = datetime.now(UTC)
+        expires_at = datetime.fromisoformat(response.json()["expiresAt"])
+        resend_at = datetime.fromisoformat(response.json()["resendAvailableAt"])
+        assert (
+            timedelta(seconds=895)
+            <= expires_at - created_at
+            <= timedelta(minutes=15)
+        )
+        assert timedelta(seconds=25) <= resend_at - created_at <= timedelta(seconds=30)
+        with Session(engine) as db:
+            assert db.get(AuthChallenge, response.json()["challengeId"]) is None
+        fake_verify = client.post(
+            "/api/v1/auth/email/verify",
+            json={
+                "email": (
+                    "already-verified@example.com"
+                    if response is already_verified
+                    else "unknown@example.com"
+                ),
+                "challengeId": response.json()["challengeId"],
+                "code": "000000",
+            },
+        )
+        assert fake_verify.status_code == 400
+        assert fake_verify.json()["error"]["code"] == "CODE_INVALID"
 
 
 def test_simultaneous_refresh_is_single_use_and_replay_revokes_family(auth_api) -> None:

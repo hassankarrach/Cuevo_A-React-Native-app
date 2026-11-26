@@ -9,6 +9,30 @@ from sqlalchemy.engine import make_url
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
 
+AUTH_RATE_LIMIT_FIELDS = {
+    "register-ip-hour": "auth_rate_limit_register_ip_hour",
+    "login-email-15m": "auth_rate_limit_login_email_15m",
+    "login-ip-15m": "auth_rate_limit_login_ip_15m",
+    "verify-email-15m": "auth_rate_limit_verify_email_15m",
+    "verify-ip-15m": "auth_rate_limit_verify_ip_15m",
+    "resend-email-30s": "auth_rate_limit_resend_email_30s",
+    "resend-email-hour": "auth_rate_limit_resend_email_hour",
+    "refresh-token-15m": "auth_rate_limit_refresh_token_15m",
+    "refresh-ip-15m": "auth_rate_limit_refresh_ip_15m",
+    "reset-request-email-30s": "auth_rate_limit_reset_request_email_30s",
+    "reset-request-email-hour": "auth_rate_limit_reset_request_email_hour",
+    "reset-request-ip-hour": "auth_rate_limit_reset_request_ip_hour",
+    "reset-confirm-email-hour": "auth_rate_limit_reset_confirm_email_hour",
+    "reset-confirm-ip-hour": "auth_rate_limit_reset_confirm_ip_hour",
+    "password-change-account-15m": "auth_rate_limit_password_change_account_15m",
+    "password-change-ip-15m": "auth_rate_limit_password_change_ip_15m",
+    "google-signin-ip-15m": "auth_rate_limit_google_signin_ip_15m",
+    "google-link-account-15m": "auth_rate_limit_google_link_account_15m",
+    "google-link-ip-15m": "auth_rate_limit_google_link_ip_15m",
+    "google-unlink-account-15m": "auth_rate_limit_google_unlink_account_15m",
+    "google-unlink-ip-15m": "auth_rate_limit_google_unlink_ip_15m",
+}
+
 
 class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
@@ -20,6 +44,29 @@ class Settings(BaseSettings):
     email_from_address: str = "no-reply@cuevo.local"
     google_ios_client_id: str | None = None
     google_server_client_id: str | None = None
+    auth_rate_limit_register_ip_hour: int = Field(default=5, ge=1, le=1000)
+    auth_rate_limit_login_email_15m: int = Field(default=5, ge=1, le=1000)
+    auth_rate_limit_login_ip_15m: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_verify_email_15m: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_verify_ip_15m: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_resend_email_30s: int = Field(default=1, ge=1, le=1000)
+    auth_rate_limit_resend_email_hour: int = Field(default=5, ge=1, le=1000)
+    auth_rate_limit_refresh_token_15m: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_refresh_ip_15m: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_reset_request_email_30s: int = Field(default=1, ge=1, le=1000)
+    auth_rate_limit_reset_request_email_hour: int = Field(default=3, ge=1, le=1000)
+    auth_rate_limit_reset_request_ip_hour: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_reset_confirm_email_hour: int = Field(default=5, ge=1, le=1000)
+    auth_rate_limit_reset_confirm_ip_hour: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_password_change_account_15m: int = Field(
+        default=5, ge=1, le=1000
+    )
+    auth_rate_limit_password_change_ip_15m: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_google_signin_ip_15m: int = Field(default=20, ge=1, le=1000)
+    auth_rate_limit_google_link_account_15m: int = Field(default=5, ge=1, le=1000)
+    auth_rate_limit_google_link_ip_15m: int = Field(default=10, ge=1, le=1000)
+    auth_rate_limit_google_unlink_account_15m: int = Field(default=5, ge=1, le=1000)
+    auth_rate_limit_google_unlink_ip_15m: int = Field(default=10, ge=1, le=1000)
 
     model_config = SettingsConfigDict(
         env_file=BACKEND_DIR / ".env",
@@ -66,6 +113,16 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def require_isolated_test_database(self) -> "Settings":
         if self.environment == "production":
+            changed_limits = [
+                name
+                for name, field_name in AUTH_RATE_LIMIT_FIELDS.items()
+                if getattr(self, field_name)
+                != type(self).model_fields[field_name].default
+            ]
+            if changed_limits:
+                raise ValueError(
+                    "Authentication rate limits cannot be overridden in production"
+                )
             raise ValueError(
                 "Production email delivery is not configured; approve a delivery adapter"
             )
@@ -89,6 +146,13 @@ class Settings(BaseSettings):
         if application_target == test_target:
             raise ValueError("TEST_DATABASE_URL must target a separate database")
         return self
+
+    def auth_rate_limit(self, name: str) -> int:
+        try:
+            field_name = AUTH_RATE_LIMIT_FIELDS[name]
+        except KeyError as exc:
+            raise ValueError(f"Unknown authentication rate limit: {name}") from exc
+        return getattr(self, field_name)
 
 
 def get_settings() -> Settings:

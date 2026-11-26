@@ -98,6 +98,7 @@ class ProfileResponse(ProfileModel):
     account_id: UUID
     display_name: str
     username: str
+    avatar_url: str | None = None
     privacy: Literal["public", "friends", "private"]
     relationship_status: Literal[
         "self",
@@ -110,6 +111,10 @@ class ProfileResponse(ProfileModel):
     location: str | None = None
     preferred_genres: list[Genre] | None = None
     permissions: ProfilePermissions
+
+
+class AvatarResponse(ProfileModel):
+    avatar_url: str
 
 
 class FriendRequestCreate(ProfileModel):

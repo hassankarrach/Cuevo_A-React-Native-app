@@ -42,6 +42,7 @@ from app.auth.schemas import (
     RegisterRequest,
     ResendEmailRequest,
     VerifyEmailRequest,
+    VerificationResendResponse,
 )
 from app.auth.security import (
     ACCESS_TOKEN_LIFETIME,
@@ -63,6 +64,7 @@ from app.auth.security import (
 )
 from app.core.config import Settings
 from app.db.session import get_db
+from app.profiles.models import Profile
 
 
 logger = logging.getLogger(__name__)
@@ -156,14 +158,19 @@ def _account_state(account: Account) -> AccountState:
     )
 
 
-def _ip_limit(name: str, request: Request, maximum: int, window: int) -> RateLimit:
-    return RateLimit(name, client_ip(request), maximum, window)
+def _ip_limit(
+    name: str,
+    request: Request,
+    settings: Settings,
+    window: int,
+) -> RateLimit:
+    return RateLimit(name, client_ip(request), settings.auth_rate_limit(name), window)
 
 
 def _email_limit(
-    name: str, email: str, maximum: int, window: int
+    name: str, email: str, settings: Settings, window: int
 ) -> RateLimit:
-    return RateLimit(name, email, maximum, window)
+    return RateLimit(name, email, settings.auth_rate_limit(name), window)
 
 
 def _new_challenge(
@@ -383,7 +390,7 @@ def register(
         db,
         settings,
         request,
-        [_ip_limit("register-ip-hour", request, 5, 3600)],
+        [_ip_limit("register-ip-hour", request, settings, 3600)],
         now=now,
     )
     account = Account(email=email, password_hash=hash_password(payload.password))
@@ -436,8 +443,8 @@ def verify_email(
         settings,
         request,
         [
-            _ip_limit("verify-ip-15m", request, 10, 900),
-            _email_limit("verify-email-15m", email, 10, 900),
+            _ip_limit("verify-ip-15m", request, settings, 900),
+            _email_limit("verify-email-15m", email, settings, 900),
         ],
         now=now,
     )
@@ -468,7 +475,7 @@ def verify_email(
 
 @router.post(
     "/auth/email/resend",
-    response_model=AcceptedResponse,
+    response_model=VerificationResendResponse,
     status_code=status.HTTP_202_ACCEPTED,
 )
 def resend_email(
@@ -476,7 +483,7 @@ def resend_email(
     request: Request,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-) -> AcceptedResponse:
+) -> VerificationResendResponse:
     settings = _settings(request)
     email = str(payload.email)
     now = utc_now()
@@ -485,17 +492,21 @@ def resend_email(
         settings,
         request,
         [
-            _email_limit("resend-email-30s", email, 1, 30),
-            _email_limit("resend-email-hour", email, 5, 3600),
+            _email_limit("resend-email-30s", email, settings, 30),
+            _email_limit("resend-email-hour", email, settings, 3600),
         ],
         now=now,
     )
     account = db.scalar(
         select(Account).where(Account.email == email).with_for_update()
     )
+    message = "If the account can receive a verification email, instructions will be sent."
     if account is None or account.email_verified_at is not None:
-        return AcceptedResponse(
-            message="If the account can receive a verification email, instructions will be sent."
+        return VerificationResendResponse(
+            message=message,
+            challenge_id=uuid4(),
+            expires_at=now + CHALLENGE_LIFETIME,
+            resend_available_at=now + RESEND_COOLDOWN,
         )
     active = db.scalar(
         select(AuthChallenge)
@@ -529,8 +540,11 @@ def resend_email(
             expires_at=challenge.expires_at.isoformat(),
         ),
     )
-    return AcceptedResponse(
-        message="If the account can receive a verification email, instructions will be sent."
+    return VerificationResendResponse(
+        message=message,
+        challenge_id=challenge.id,
+        expires_at=challenge.expires_at,
+        resend_available_at=challenge.resend_available_at,
     )
 
 
@@ -548,8 +562,8 @@ def login(
         settings,
         request,
         [
-            _email_limit("login-email-15m", email, 5, 900),
-            _ip_limit("login-ip-15m", request, 10, 900),
+            _email_limit("login-email-15m", email, settings, 900),
+            _ip_limit("login-ip-15m", request, settings, 900),
         ],
         now=now,
     )
@@ -627,7 +641,7 @@ def google_sign_in(
         db,
         settings,
         request,
-        [_ip_limit("google-signin-ip-15m", request, 20, 900)],
+        [_ip_limit("google-signin-ip-15m", request, settings, 900)],
         now=now,
     )
     identity = _verified_google_identity(request, payload.id_token)
@@ -760,8 +774,13 @@ def link_google_account(
         settings,
         request,
         [
-            RateLimit("google-link-account-15m", str(principal.account.id), 5, 900),
-            _ip_limit("google-link-ip-15m", request, 10, 900),
+            RateLimit(
+                "google-link-account-15m",
+                str(principal.account.id),
+                settings.auth_rate_limit("google-link-account-15m"),
+                900,
+            ),
+            _ip_limit("google-link-ip-15m", request, settings, 900),
         ],
         now=now,
     )
@@ -860,8 +879,13 @@ def unlink_google_account(
         settings,
         request,
         [
-            RateLimit("google-unlink-account-15m", str(principal.account.id), 5, 900),
-            _ip_limit("google-unlink-ip-15m", request, 10, 900),
+            RateLimit(
+                "google-unlink-account-15m",
+                str(principal.account.id),
+                settings.auth_rate_limit("google-unlink-account-15m"),
+                900,
+            ),
+            _ip_limit("google-unlink-ip-15m", request, settings, 900),
         ],
         now=now,
     )
@@ -935,8 +959,13 @@ def refresh(
         settings,
         request,
         [
-            _ip_limit("refresh-ip-15m", request, 10, 900),
-            RateLimit("refresh-token-15m", token_digest, 10, 900),
+            _ip_limit("refresh-ip-15m", request, settings, 900),
+            RateLimit(
+                "refresh-token-15m",
+                token_digest,
+                settings.auth_rate_limit("refresh-token-15m"),
+                900,
+            ),
         ],
         now=now,
     )
@@ -1010,6 +1039,17 @@ def mark_profile_completed(
             "EMAIL_NOT_VERIFIED",
             "Verify your email before completing onboarding.",
         )
+    profile = db.get(Profile, principal.account.id)
+    if (
+        profile is None
+        or not profile.display_name.strip()
+        or not profile.username.strip()
+    ):
+        raise APIError(
+            422,
+            "VALIDATION_ERROR",
+            "Save a display name and username before completing profile setup.",
+        )
     principal.account.profile_completed = True
     db.commit()
     return _account_state(principal.account)
@@ -1034,9 +1074,9 @@ def request_password_reset(
         settings,
         request,
         [
-            _email_limit("reset-request-email-30s", email, 1, 30),
-            _email_limit("reset-request-email-hour", email, 3, 3600),
-            _ip_limit("reset-request-ip-hour", request, 10, 3600),
+            _email_limit("reset-request-email-30s", email, settings, 30),
+            _email_limit("reset-request-email-hour", email, settings, 3600),
+            _ip_limit("reset-request-ip-hour", request, settings, 3600),
         ],
         now=now,
     )
@@ -1078,8 +1118,13 @@ def confirm_password_reset(
         settings,
         request,
         [
-            _ip_limit("reset-confirm-ip-hour", request, 10, 3600),
-            RateLimit("reset-confirm-email-hour", email_digest, 5, 3600),
+            _ip_limit("reset-confirm-ip-hour", request, settings, 3600),
+            RateLimit(
+                "reset-confirm-email-hour",
+                email_digest,
+                settings.auth_rate_limit("reset-confirm-email-hour"),
+                3600,
+            ),
         ],
         now=now,
     )
@@ -1121,8 +1166,13 @@ def change_password(
         settings,
         request,
         [
-            RateLimit("password-change-account-15m", str(principal.account.id), 5, 900),
-            _ip_limit("password-change-ip-15m", request, 10, 900),
+            RateLimit(
+                "password-change-account-15m",
+                str(principal.account.id),
+                settings.auth_rate_limit("password-change-account-15m"),
+                900,
+            ),
+            _ip_limit("password-change-ip-15m", request, settings, 900),
         ],
         now=now,
     )

@@ -1,11 +1,26 @@
+from io import BytesIO
+
 import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
+from sqlalchemy.orm import Session
 
 from app.auth.email import InMemoryEmailDelivery
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db_engine
 from app.main import create_app
+from app.profiles.models import ProfileAvatar
+
+
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+
+
+def _image_bytes(image_format: str = "PNG") -> bytes:
+    image = Image.new("RGB", (4, 4), (30, 80, 120))
+    output = BytesIO()
+    image.save(output, format=image_format)
+    return output.getvalue()
 
 
 @pytest.fixture
@@ -357,6 +372,260 @@ def test_profile_inputs_are_validated_and_actor_ids_are_never_client_controlled(
     ).status_code == 422
 
 
+def test_profile_completion_requires_saved_profile_and_is_idempotent(profile_api) -> None:
+    client, delivery = profile_api
+    account_id, headers = _create_user(
+        client, delivery, "onboarding-profile@example.com"
+    )
+
+    missing_profile = client.post(
+        "/api/v1/me/onboarding/profile-completed",
+        headers=headers,
+    )
+    assert missing_profile.status_code == 422
+    assert missing_profile.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert client.get("/api/v1/me", headers=headers).json()["profileCompleted"] is False
+
+    incomplete_profile = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"displayName": "Onboarding User"},
+    )
+    assert incomplete_profile.status_code == 422
+    still_incomplete = client.post(
+        "/api/v1/me/onboarding/profile-completed",
+        headers=headers,
+    )
+    assert still_incomplete.status_code == 422
+
+    saved_profile = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"displayName": "Onboarding User", "username": "onboarding_user"},
+    )
+    assert saved_profile.status_code == 200
+    assert (
+        client.get(f"/api/v1/profiles/{account_id}", headers=headers).status_code
+        == 200
+    )
+    completed = client.post(
+        "/api/v1/me/onboarding/profile-completed",
+        headers=headers,
+    )
+    assert completed.status_code == 200
+    assert completed.json()["profileCompleted"] is True
+    assert completed.json()["onboardingStep"] == "HOME"
+    repeated = client.post(
+        "/api/v1/me/onboarding/profile-completed",
+        headers=headers,
+    )
+    assert repeated.status_code == 200
+    assert repeated.json() == completed.json()
+    assert client.get("/api/v1/me/profile", headers=headers).json()["username"] == (
+        "onboarding_user"
+    )
+
+
+def test_avatar_upload_read_replace_and_delete_are_persistent(profile_api) -> None:
+    client, delivery = profile_api
+    account_id, headers = _create_user(client, delivery, "avatar-owner@example.com")
+    assert client.put(
+        "/api/v1/me/avatar",
+        headers={**headers, "Content-Type": "image/png"},
+        content=_image_bytes(),
+    ).status_code == 404
+
+    created = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"displayName": "Avatar Owner", "username": "avatar_owner"},
+    )
+    assert created.status_code == 200
+    png = _image_bytes()
+    uploaded = client.put(
+        "/api/v1/me/avatar",
+        headers={**headers, "Content-Type": "image/png"},
+        content=png,
+    )
+    assert uploaded.status_code == 200
+    avatar_url = f"/api/v1/profiles/{account_id}/avatar"
+    assert uploaded.json() == {"avatarUrl": avatar_url}
+    profile = client.get("/api/v1/me/profile", headers=headers)
+    assert profile.status_code == 200
+    assert profile.json()["avatarUrl"] == avatar_url
+
+    with Session(get_db_engine()) as db:
+        avatar = db.get(ProfileAvatar, account_id)
+        assert avatar is not None
+        assert avatar.content_type == "image/png"
+        assert avatar.image_data == png
+
+    image_response = client.get(avatar_url, headers=headers)
+    assert image_response.status_code == 200
+    assert image_response.content == png
+    assert image_response.headers["content-type"] == "image/png"
+    assert image_response.headers["cache-control"] == "private, no-store"
+    assert image_response.headers["x-content-type-options"] == "nosniff"
+
+    webp = _image_bytes("WEBP")
+    replaced = client.put(
+        "/api/v1/me/avatar",
+        headers={**headers, "Content-Type": "image/webp"},
+        content=webp,
+    )
+    assert replaced.status_code == 200
+    assert client.get(avatar_url, headers=headers).content == webp
+    with Session(get_db_engine()) as db:
+        avatar = db.get(ProfileAvatar, account_id)
+        assert avatar is not None
+        assert avatar.content_type == "image/webp"
+        assert avatar.image_data == webp
+
+    assert client.delete("/api/v1/me/avatar", headers=headers).status_code == 204
+    assert client.delete("/api/v1/me/avatar", headers=headers).status_code == 204
+    assert client.get(avatar_url, headers=headers).status_code == 404
+    assert client.get("/api/v1/me/profile", headers=headers).json()["avatarUrl"] is None
+    with Session(get_db_engine()) as db:
+        assert db.get(ProfileAvatar, account_id) is None
+
+
+@pytest.mark.parametrize(
+    ("content_type", "content", "expected_status", "expected_code"),
+    [
+        ("image/gif", b"GIF89a", 415, "UNSUPPORTED_MEDIA_TYPE"),
+        ("image/png", b"not an image", 415, "INVALID_AVATAR"),
+        ("image/jpeg", _image_bytes("PNG"), 415, "INVALID_AVATAR"),
+        ("image/png", b"x" * (MAX_AVATAR_BYTES + 1), 413, "AVATAR_TOO_LARGE"),
+    ],
+)
+def test_avatar_upload_rejects_invalid_mime_content_and_size(
+    profile_api,
+    content_type: str,
+    content: bytes,
+    expected_status: int,
+    expected_code: str,
+) -> None:
+    client, delivery = profile_api
+    _account_id, headers = _create_user(
+        client, delivery, f"avatar-validation-{expected_status}@example.com"
+    )
+    created = client.patch(
+        "/api/v1/me/profile",
+        headers=headers,
+        json={"displayName": "Avatar User", "username": f"avatar_user_{expected_status}"},
+    )
+    assert created.status_code == 200
+    response = client.put(
+        "/api/v1/me/avatar",
+        headers={**headers, "Content-Type": content_type},
+        content=content,
+    )
+    assert response.status_code == expected_status
+    assert response.json()["error"]["code"] == expected_code
+
+
+@pytest.mark.parametrize(
+    ("privacy", "friend_can_read", "stranger_can_read"),
+    [
+        ("public", True, True),
+        ("friends", True, False),
+        ("private", False, False),
+    ],
+)
+def test_avatar_reads_follow_profile_privacy(
+    profile_api,
+    privacy: str,
+    friend_can_read: bool,
+    stranger_can_read: bool,
+) -> None:
+    client, delivery = profile_api
+    owner_id, owner_headers = _create_user(
+        client, delivery, f"avatar-privacy-owner-{privacy}@example.com"
+    )
+    _friend_id, friend_headers = _create_user(
+        client, delivery, f"avatar-privacy-friend-{privacy}@example.com"
+    )
+    _stranger_id, stranger_headers = _create_user(
+        client, delivery, f"avatar-privacy-stranger-{privacy}@example.com"
+    )
+    owner_profile = client.patch(
+        "/api/v1/me/profile",
+        headers=owner_headers,
+        json={"displayName": "Privacy Owner", "username": f"privacy_owner_{privacy}"},
+    )
+    assert owner_profile.status_code == 200
+    assert client.patch(
+        "/api/v1/me/privacy",
+        headers=owner_headers,
+        json={"privacy": privacy},
+    ).status_code == 200
+
+    request = client.post(
+        "/api/v1/friend-requests",
+        headers=friend_headers,
+        json={"targetAccountId": owner_id},
+    )
+    assert request.status_code == 201
+    assert client.post(
+        f"/api/v1/friend-requests/{request.json()['id']}/accept",
+        headers=owner_headers,
+    ).status_code == 200
+
+    upload = client.put(
+        "/api/v1/me/avatar",
+        headers={**owner_headers, "Content-Type": "image/jpeg"},
+        content=_image_bytes("JPEG"),
+    )
+    assert upload.status_code == 200
+    avatar_url = f"/api/v1/profiles/{owner_id}/avatar"
+    assert client.get(avatar_url, headers=owner_headers).status_code == 200
+    assert (
+        client.get(avatar_url, headers=friend_headers).status_code
+        == (200 if friend_can_read else 404)
+    )
+    assert (
+        client.get(avatar_url, headers=stranger_headers).status_code
+        == (200 if stranger_can_read else 404)
+    )
+    friend_profile = client.get(
+        f"/api/v1/profiles/{owner_id}",
+        headers=friend_headers,
+    )
+    stranger_profile = client.get(
+        f"/api/v1/profiles/{owner_id}",
+        headers=stranger_headers,
+    )
+    assert friend_profile.json()["avatarUrl"] == (
+        avatar_url if friend_can_read else None
+    )
+    assert stranger_profile.json()["avatarUrl"] == (
+        avatar_url if stranger_can_read else None
+    )
+
+
+def test_avatar_routes_require_authentication_and_openapi_declares_upload(
+    profile_api,
+) -> None:
+    client, _delivery = profile_api
+    assert client.put(
+        "/api/v1/me/avatar",
+        headers={"Content-Type": "image/png"},
+        content=_image_bytes(),
+    ).status_code == 401
+    assert client.delete("/api/v1/me/avatar").status_code == 401
+    assert client.get(
+        "/api/v1/profiles/00000000-0000-0000-0000-000000000001/avatar"
+    ).status_code == 401
+    schema = client.get("/openapi.json").json()
+    assert "/api/v1/me/avatar" in schema["paths"]
+    assert "/api/v1/profiles/{account_id}/avatar" in schema["paths"]
+    assert set(schema["paths"]["/api/v1/me/avatar"]["put"]["requestBody"]["content"]) == {
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    }
+
+
 def test_profile_routes_are_authenticated_and_openapi_has_no_profile_search_or_counts(
     profile_api,
 ) -> None:
@@ -377,10 +646,11 @@ def test_profile_routes_are_authenticated_and_openapi_has_no_profile_search_or_c
     schema = client.get("/openapi.json").json()
     assert "/api/v1/me/profile" in schema["paths"]
     assert "/api/v1/profiles/{account_id}" in schema["paths"]
+    assert "/api/v1/me/avatar" in schema["paths"]
     assert "/api/v1/friend-requests/{request_id}/accept" in schema["paths"]
     assert "/api/v1/friends" in schema["paths"]
     assert "/api/v1/profiles" not in schema["paths"]
-    assert "avatarUrl" not in schema["components"]["schemas"]["ProfileResponse"]["properties"]
+    assert "avatarUrl" in schema["components"]["schemas"]["ProfileResponse"]["properties"]
     username_schema = next(
         option
         for option in schema["components"]["schemas"]["ProfileUpdate"]["properties"][

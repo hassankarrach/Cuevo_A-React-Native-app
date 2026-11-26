@@ -1,8 +1,11 @@
 from datetime import UTC, datetime
+from io import BytesIO
+import warnings
 from typing import Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
+from PIL import Image, UnidentifiedImageError
 from sqlalchemy import case, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -11,8 +14,9 @@ from app.api.errors import APIError, FieldError
 from app.auth.dependencies import Principal, current_principal
 from app.auth.models import Account
 from app.db.session import get_db
-from app.profiles.models import Friendship, Profile
+from app.profiles.models import Friendship, Profile, ProfileAvatar
 from app.profiles.schemas import (
+    AvatarResponse,
     FriendListItem,
     FriendListResponse,
     FriendRequestCreate,
@@ -27,6 +31,12 @@ from app.profiles.schemas import (
 
 
 router = APIRouter(prefix="/api/v1", tags=["profiles", "friendships"])
+MAX_AVATAR_BYTES = 2 * 1024 * 1024
+AVATAR_CONTENT_TYPES = {
+    "JPEG": "image/jpeg",
+    "PNG": "image/png",
+    "WEBP": "image/webp",
+}
 RelationshipStatus = Literal[
     "self",
     "friends",
@@ -71,6 +81,23 @@ def _relationship_status(
     return "incoming_pending"
 
 
+def _can_read_avatar(
+    db: Session,
+    viewer_id: UUID,
+    profile: Profile,
+) -> bool:
+    if viewer_id == profile.account_id or profile.privacy == "public":
+        return True
+    return (
+        profile.privacy == "friends"
+        and _relationship_status(db, viewer_id, profile.account_id) == "friends"
+    )
+
+
+def _avatar_url(account_id: UUID) -> str:
+    return f"/api/v1/profiles/{account_id}/avatar"
+
+
 def _profile_response(
     db: Session,
     viewer_id: UUID,
@@ -78,6 +105,7 @@ def _profile_response(
 ) -> ProfileResponse:
     relationship_status = _relationship_status(db, viewer_id, profile.account_id)
     is_owner = relationship_status == "self"
+    can_read_avatar = _can_read_avatar(db, viewer_id, profile)
     can_view_private_fields = (
         is_owner
         or profile.privacy == "public"
@@ -89,6 +117,11 @@ def _profile_response(
         "username": profile.username,
         "privacy": profile.privacy,
         "relationship_status": relationship_status,
+        "avatar_url": (
+            _avatar_url(profile.account_id)
+            if can_read_avatar and db.get(ProfileAvatar, profile.account_id) is not None
+            else None
+        ),
         "permissions": ProfilePermissions(
             can_edit=is_owner,
             can_view_private_fields=can_view_private_fields,
@@ -104,6 +137,62 @@ def _profile_response(
             preferred_genres=list(profile.preferred_genres),
         )
     return ProfileResponse(**fields)
+
+
+async def _read_avatar_upload(request: Request) -> tuple[str, bytes]:
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type not in AVATAR_CONTENT_TYPES.values():
+        raise APIError(
+            415,
+            "UNSUPPORTED_MEDIA_TYPE",
+            "Upload a JPEG, PNG, or WebP image.",
+        )
+
+    content_length = request.headers.get("content-length")
+    if content_length is not None:
+        try:
+            if int(content_length) > MAX_AVATAR_BYTES:
+                raise APIError(
+                    413,
+                    "AVATAR_TOO_LARGE",
+                    "Avatar images must be 2 MiB or smaller.",
+                )
+        except ValueError as exc:
+            raise APIError(400, "BAD_REQUEST", "The request could not be processed.") from exc
+
+    body = bytearray()
+    async for chunk in request.stream():
+        if len(body) + len(chunk) > MAX_AVATAR_BYTES:
+            raise APIError(
+                413,
+                "AVATAR_TOO_LARGE",
+                "Avatar images must be 2 MiB or smaller.",
+            )
+        body.extend(chunk)
+    if not body:
+        raise APIError(415, "INVALID_AVATAR", "The uploaded image is not valid.")
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            with Image.open(BytesIO(body)) as image:
+                detected_content_type = AVATAR_CONTENT_TYPES.get(image.format or "")
+                image.verify()
+    except (
+        Image.DecompressionBombError,
+        Image.DecompressionBombWarning,
+        OSError,
+        UnidentifiedImageError,
+    ) as exc:
+        raise APIError(415, "INVALID_AVATAR", "The uploaded image is not valid.") from exc
+
+    if detected_content_type != content_type:
+        raise APIError(
+            415,
+            "INVALID_AVATAR",
+            "The declared content type does not match the uploaded image.",
+        )
+    return content_type, bytes(body)
 
 
 def _lock_account_pair(
@@ -210,6 +299,107 @@ def read_my_profile(
     if profile is None:
         raise _not_found()
     return _profile_response(db, principal.account.id, profile)
+
+
+@router.put(
+    "/me/avatar",
+    response_model=AvatarResponse,
+    responses={
+        401: {"description": "Authentication required"},
+        404: {"description": "A profile is required before uploading an avatar"},
+        413: {"description": "Avatar exceeds the 2 MiB size limit"},
+        415: {"description": "Unsupported or invalid image"},
+    },
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                content_type: {
+                    "schema": {"type": "string", "format": "binary"}
+                }
+                for content_type in AVATAR_CONTENT_TYPES.values()
+            },
+        }
+    },
+)
+async def upload_my_avatar(
+    request: Request,
+    principal: Principal = Depends(current_principal),
+    db: Session = Depends(get_db),
+) -> AvatarResponse:
+    profile = db.get(Profile, principal.account.id)
+    if profile is None:
+        raise _not_found()
+
+    content_type, image_data = await _read_avatar_upload(request)
+    avatar = db.get(ProfileAvatar, principal.account.id)
+    if avatar is None:
+        avatar = ProfileAvatar(
+            account_id=principal.account.id,
+            content_type=content_type,
+            image_data=image_data,
+        )
+        db.add(avatar)
+    else:
+        avatar.content_type = content_type
+        avatar.image_data = image_data
+    db.flush()
+    return AvatarResponse(avatar_url=_avatar_url(principal.account.id))
+
+
+@router.delete(
+    "/me/avatar",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={401: {"description": "Authentication required"}},
+)
+def delete_my_avatar(
+    principal: Principal = Depends(current_principal),
+    db: Session = Depends(get_db),
+) -> Response:
+    profile = db.get(Profile, principal.account.id)
+    if profile is None:
+        raise _not_found()
+    avatar = db.get(ProfileAvatar, principal.account.id)
+    if avatar is not None:
+        db.delete(avatar)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/profiles/{account_id}/avatar",
+    response_class=Response,
+    responses={
+        200: {
+            "description": "Profile avatar image",
+            "content": {
+                content_type: {"schema": {"type": "string", "format": "binary"}}
+                for content_type in AVATAR_CONTENT_TYPES.values()
+            },
+        },
+        401: {"description": "Authentication required"},
+        404: {"description": "Avatar unavailable or not visible to this viewer"},
+    },
+)
+def read_profile_avatar(
+    account_id: UUID,
+    principal: Principal = Depends(current_principal),
+    db: Session = Depends(get_db),
+) -> Response:
+    profile = db.get(Profile, account_id)
+    if profile is None or not _can_read_avatar(db, principal.account.id, profile):
+        raise _not_found()
+    avatar = db.get(ProfileAvatar, account_id)
+    if avatar is None:
+        raise _not_found()
+    return Response(
+        content=avatar.image_data,
+        media_type=avatar.content_type,
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": "inline",
+        },
+    )
 
 
 @router.patch(

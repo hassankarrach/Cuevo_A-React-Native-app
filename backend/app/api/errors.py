@@ -15,7 +15,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 logger = logging.getLogger(__name__)
 _SAFE_CODE = re.compile(r"^[A-Z][A-Z0-9_]{0,63}$")
 _SAFE_FIELD = re.compile(r"^[A-Za-z_][A-Za-z0-9_.-]{0,63}$")
-_SUPPORTED_API_ERROR_STATUSES = {400, 401, 403, 404, 409, 422, 429, 503}
+_SUPPORTED_API_ERROR_STATUSES = {400, 401, 403, 404, 409, 413, 415, 422, 429, 503}
 _SENSITIVE_FIELD_PARTS = (
     "password",
     "token",
@@ -88,6 +88,8 @@ _HTTP_ERROR_DEFAULTS: dict[int, tuple[str, str]] = {
     404: ("NOT_FOUND", "The requested resource was not found."),
     405: ("METHOD_NOT_ALLOWED", "This method is not allowed for the resource."),
     409: ("REVISION_CONFLICT", "The resource has changed. Refresh and try again."),
+    413: ("PAYLOAD_TOO_LARGE", "The request body is too large."),
+    415: ("UNSUPPORTED_MEDIA_TYPE", "The request media type is not supported."),
     422: ("VALIDATION_ERROR", "Request validation failed."),
     429: ("RATE_LIMITED", "Too many requests. Try again later."),
     503: ("SERVICE_UNAVAILABLE", "The service is temporarily unavailable."),
@@ -222,7 +224,20 @@ def _example(
 def install_openapi_contract(app: FastAPI) -> None:
     defaults = {
         status_code: _HTTP_ERROR_DEFAULTS[status_code]
-        for status_code in (400, 401, 403, 404, 405, 409, 422, 429, 500, 503)
+        for status_code in (
+            400,
+            401,
+            403,
+            404,
+            405,
+            409,
+            413,
+            415,
+            422,
+            429,
+            500,
+            503,
+        )
     }
     schema_names = {
         400: "BadRequest",
@@ -231,6 +246,8 @@ def install_openapi_contract(app: FastAPI) -> None:
         404: "NotFound",
         405: "MethodNotAllowed",
         409: "RevisionConflict",
+        413: "PayloadTooLarge",
+        415: "UnsupportedMediaType",
         422: "ValidationError",
         429: "RateLimited",
         500: "InternalError",

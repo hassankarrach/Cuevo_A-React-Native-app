@@ -154,6 +154,12 @@ class AcceptedResponse(AuthModel):
     message: str
 
 
+class VerificationResendResponse(AcceptedResponse):
+    challenge_id: UUID
+    expires_at: datetime
+    resend_available_at: datetime
+
+
 class AuthTokensResponse(AuthModel):
     access_token: str
     token_type: Literal["Bearer"] = "Bearer"

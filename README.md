@@ -49,7 +49,7 @@ its account/session migration are documented in the
 [auth lifecycle guide](backend/docs/auth-lifecycle.md); this does not wire
 mobile credentials. Profile and friendship backend behavior is documented in
 the [profile/friendship contract](backend/docs/profile-and-friendship.md);
-avatar mutations remain deferred pending an approved storage contract. Google native
+avatars use durable PostgreSQL storage with privacy-filtered access. Google native
 ID-token verification and explicit account linking are implemented in the
 backend and documented in the [auth lifecycle guide](backend/docs/auth-lifecycle.md).
 The current checkout contains no iOS project or mobile source, so native SDK

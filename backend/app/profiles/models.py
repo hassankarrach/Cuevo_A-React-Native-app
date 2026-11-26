@@ -7,6 +7,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     JSON,
+    LargeBinary,
     String,
     Uuid,
     func,
@@ -69,6 +70,34 @@ class Profile(Base):
         nullable=False,
         server_default=func.now(),
     )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
+class ProfileAvatar(Base):
+    __tablename__ = "profile_avatars"
+    __table_args__ = (
+        CheckConstraint(
+            "content_type IN ('image/jpeg', 'image/png', 'image/webp')",
+            name="ck_profile_avatars_content_type",
+        ),
+        CheckConstraint(
+            "octet_length(image_data) BETWEEN 1 AND 2097152",
+            name="ck_profile_avatars_image_size",
+        ),
+    )
+
+    account_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("profiles.account_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    content_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    image_data: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

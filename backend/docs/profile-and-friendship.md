@@ -31,11 +31,13 @@ The profile privacy setting applies to bio, location and preferred genres:
 | Accepted friend | Visible | Visible | Hidden |
 | Stranger | Visible | Hidden | Hidden |
 
-Hidden keys are omitted from the response, not returned as `null`. The client
-must use the viewer-specific `permissions` and `relationshipStatus` fields and
-must not infer edit access from visible data. Email verification and
-`profileCompleted` remain separate account states; profile edits do not mark
-onboarding complete or verify an email.
+Hidden profile fields are omitted from the response, not returned as `null`.
+`avatarUrl` is the exception: it is always present and is `null` when the viewer
+cannot read an avatar or none is stored. The client must use the viewer-specific
+`permissions` and `relationshipStatus` fields and must not infer edit access
+from visible data. Email verification and `profileCompleted` remain separate
+account states; profile edits do not mark onboarding complete or verify an
+email.
 
 Profile reads return an opaque `accountId`, never an email address. A missing
 profile and a profile that does not exist share the generic `404 NOT_FOUND`.
@@ -52,6 +54,9 @@ badge can be exposed; it is not inferred from `emailVerified`.
 | --- | --- |
 | `GET /api/v1/me/profile` | Read the authenticated user's profile |
 | `PATCH /api/v1/me/profile` | Create or update display name, username, bio and location; creation requires display name and username |
+| `PUT /api/v1/me/avatar` | Upload or replace the authenticated user's avatar as a raw image body |
+| `DELETE /api/v1/me/avatar` | Delete the authenticated user's avatar |
+| `GET /api/v1/profiles/{account_id}/avatar` | Read an avatar when allowed by profile privacy |
 | `PATCH /api/v1/me/privacy` | Update the profile visibility setting |
 | `PUT /api/v1/me/music-preferences` | Replace the preferred genre list |
 | `GET /api/v1/profiles/{account_id}` | Read a profile with privacy filtering and viewer capabilities |
@@ -65,6 +70,7 @@ A profile response includes:
   "username": "alex_example",
   "privacy": "friends",
   "relationshipStatus": "friends",
+  "avatarUrl": null,
   "bio": "Live music fan",
   "location": "Wellington",
   "preferredGenres": ["Jazz", "Ambient"],
@@ -78,13 +84,120 @@ A profile response includes:
 }
 ```
 
+For the owner's authenticated profile, create or update it with
+`PATCH /api/v1/me/profile`:
+
+```json
+{
+  "displayName": "Alex Example",
+  "username": "alex_example",
+  "bio": "Live music fan",
+  "location": "Wellington"
+}
+```
+
+Profile creation requires both `displayName` and `username`. A successful
+response includes the persisted profile fields and viewer permissions:
+
+```json
+{
+  "accountId": "b1c2d3e4-f5a6-4789-8012-3456789abcde",
+  "displayName": "Alex Example",
+  "username": "alex_example",
+  "avatarUrl": null,
+  "privacy": "private",
+  "relationshipStatus": "self",
+  "bio": "Live music fan",
+  "location": "Wellington",
+  "preferredGenres": [],
+  "permissions": {
+    "canEdit": true,
+    "canViewPrivateFields": true,
+    "canRequestFriendship": false,
+    "canRespondToFriendRequest": false,
+    "canRemoveFriend": false
+  }
+}
+```
+
 For a stranger viewing a `friends` or `private` profile, `bio`, `location` and
-`preferredGenres` are absent from the JSON object. No avatar URL is present:
-avatar upload, replacement and deletion are deferred until an object-storage
-provider, durable URL format, access policy, size limit and MIME allowlist are
-approved. Local `file://` paths and ephemeral app-server files are not valid
-avatar references. Inaccessible/deleted-image behavior cannot be implemented
-or tested before that storage contract exists.
+`preferredGenres` are absent from the JSON object. `avatarUrl` is a stable,
+relative API reference when the viewer may read the avatar; it is `null` when
+no avatar exists or privacy denies access, so the response does not disclose
+whether an inaccessible avatar is stored. The binary read endpoint repeats
+the privacy check and returns the same generic `404 NOT_FOUND` when missing or
+inaccessible.
+
+### Approved avatar storage and access contract
+
+Avatar bytes are stored durably in PostgreSQL in a dedicated `profile_avatars`
+table, not in an ephemeral app-server directory. The approved maximum is
+2 MiB. The raw request body must be `image/jpeg`, `image/png`, or `image/webp`;
+the backend decodes/verifies the image and requires the detected format to
+match the declared content type. The schema also enforces the content-type
+allowlist and byte-size bound. SVG, GIF, empty/corrupt images, spoofed MIME
+types, and larger bodies are rejected. The stable response reference is
+`/api/v1/profiles/{accountId}/avatar`; clients must not send or store
+device-local `file://` paths as server references.
+
+Avatar reads require authentication and follow the profile's privacy state:
+
+| Profile privacy | Avatar readers |
+|---|---|
+| `public` | Any authenticated viewer |
+| `friends` | Owner and accepted friends |
+| `private` | Owner only |
+
+`PUT /api/v1/me/avatar` accepts the image bytes directly, with the matching
+`Content-Type` header. It requires an existing profile and creates or replaces
+only the authenticated user's image:
+
+```bash
+curl -X PUT http://127.0.0.1:8000/api/v1/me/avatar \
+  -H "Authorization: Bearer <access-token>" \
+  -H "Content-Type: image/png" \
+  --data-binary @avatar.png
+```
+
+Success returns:
+
+```json
+{
+  "avatarUrl": "/api/v1/profiles/b1c2d3e4-f5a6-4789-8012-3456789abcde/avatar"
+}
+```
+
+`GET` the returned reference with an access token to receive the image bytes.
+`DELETE /api/v1/me/avatar` removes the current user's image and returns `204`;
+deleting an already-absent image is also successful. Upload before profile
+creation returns `404`. Invalid content and MIME mismatch return `415`, and
+oversized bodies return `413`; errors never include image bytes or database
+details. Binary responses set `Cache-Control: private, no-store` and
+`X-Content-Type-Options: nosniff`.
+
+## Profile and onboarding sequence
+
+The client sequence is:
+
+1. Verify the account email using the challenge ID and code received at the
+   verified email address.
+2. Read `GET /api/v1/me/profile`. A missing profile returns `404 NOT_FOUND`;
+   create it with `PATCH /api/v1/me/profile` containing both `displayName` and
+   `username`, or update the existing profile.
+3. Optionally upload an avatar with `PUT /api/v1/me/avatar`. Avatar is not
+   required for profile completion.
+4. Explicitly call `POST /api/v1/me/onboarding/profile-completed`. This route
+   requires a verified email and a saved profile with non-empty display name
+   and username. It returns `422 VALIDATION_ERROR` if the profile is absent or
+   incomplete; it never creates the profile or infers completion from a profile
+   update.
+5. Continue to Home only after the response reports
+   `profileCompleted: true` and `onboardingStep: "HOME"`.
+
+The completion operation is idempotent and returns the updated account state.
+Profile creation/update and avatar are separate from this state transition.
+The profile fields and avatar bytes are persisted in PostgreSQL; no device-local
+`file://` avatar paths are accepted or returned.
 
 ## Friendship contract
 
