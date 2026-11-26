@@ -100,7 +100,11 @@ verification, sign-in and explicit account link/unlink are implemented under
 `/api/v1`; configure the optional public Google client IDs in `.env` to enable
 them. The current checkout contains no iOS project or mobile source, so
 native SDK integration remains a client-side task. Facebook is not supported.
-Other product routes and
+Authenticated profile/privacy, music-preference, friendship and relationship
+routes are implemented and documented in the
+[profile/friendship contract](docs/profile-and-friendship.md). Avatar upload,
+replacement and deletion remain deferred pending an approved durable storage
+contract. Other product routes and
 shared proposals for pagination, revisions, viewer permissions and WebSocket
 delivery still require review. See the [API contract](docs/api-contract.md)
 for the shared envelope and remaining approval boundaries.
@@ -171,7 +175,11 @@ alembic downgrade -1
 The initial `0001_initial` migration establishes migration metadata only;
 `0002_account_auth` adds the email/password account/authentication tables and
 `0003_google_identity` adds provider identity mappings and allows passwordless
-Google accounts. To apply the migrations to the isolated test database, set
+Google accounts. `0004_profiles_friendships` adds profile data and the
+deterministic friendship-request model without duplicating F02 account or
+session tables. Its downgrade drops profile and friendship data; only test a
+downgrade against an isolated disposable database. To apply the migrations to
+the isolated test database, set
 `DATABASE_URL` to `cuevo_dev`, `TEST_DATABASE_URL` to `cuevo_test`, and run
 `ENVIRONMENT=test alembic upgrade head`.
 
@@ -192,6 +200,9 @@ active challenge codes.
 
 See the [auth lifecycle guide](docs/auth-lifecycle.md) for local Mailpit,
 migration, request examples, and repeatable demo-account setup. See
+[profile/friendship contract](docs/profile-and-friendship.md) for profile
+limits/privacy, friendship transitions, and disposable integration-test
+accounts. See
 [foundation verification](docs/foundation-verification.md) for database
 isolation and environment verification.
 

@@ -385,5 +385,7 @@ the direct client peer address; it does not trust forwarded-IP headers.
 
 The application intentionally refuses `ENVIRONMENT=production` until a
 production email delivery adapter is separately approved and configured.
-Social-provider verification, profile/friendship data ownership, and mobile
-credential storage remain out of scope.
+Social-provider verification is implemented in this backend. Profile and
+friendship behavior is documented in the
+[profile/friendship contract](./profile-and-friendship.md); avatar storage and
+mobile credential storage remain deferred.

@@ -44,7 +44,7 @@ Backend teammate leads infrastructure, authentication, email flows, provider ide
 
 Frontend developer leads mobile screens, navigation, client session storage, native provider integration, API integration, realtime consumption, offline client, proximity detection and later the web client.
 
-**Existing split:** frontend developer contributes the profiles/friendships backend feature, with backend teammate review. Establish shared account IDs, authentication dependencies, database conventions and migration ownership first. Do not independently build a competing profile/friendship model. If ownership changes, explicitly record it.
+**Ownership update (2026-11-26):** The earlier split is no longer current. The backend teammate implements and authors/owns the profiles/friendships backend feature and migration; the frontend developer owns client integration. This explicitly supersedes the prior frontend-implementation/backend-review exception. Reuse shared account IDs, authentication dependencies and database conventions; do not build a competing profile/friendship model.
 
 For each slice: propose OpenAPI schemas/examples and errors, record contract decisions, implement server behavior and tests, provide a reproducible demo, then coordinate client integration. Backend teammate may choose internal tables and modules without reproducing React component structure.
 
@@ -209,9 +209,24 @@ Current UI limits: email input 254 characters, password input 128 characters, pa
 
 Proposed responses should include challenge ID/purpose, masked destination, `expiresAt`, `resendAvailableAt`; account state should include `id`, `emailVerified`, `profileCompleted`, linked providers and sanitized profile. Never expose password hashes or reset/verification secrets in normal responses. Refresh-session contract must specify rotation, expiry, replay/reuse behavior, revocation and handling of parallel refresh attempts. Client secure credential storage is a later frontend responsibility.
 
-Profile reads must enforce `public | friends | private` for bio, location and genres; own-user reads can include private values. Username uniqueness/case normalization/change policy and field maximum lengths remain open. UI has separate `verified` and `subscriptionActive` badges: decide whether the Verified badge means verified email or a different account status; do not silently conflate them.
+The profile/friendship contract is recorded in
+[`backend/docs/profile-and-friendship.md`](backend/docs/profile-and-friendship.md).
+User-approved rules: usernames are trimmed, ASCII letters/digits/underscore,
+3–30 characters, lowercase-normalized, globally unique and changeable without
+a cooldown; display name is 1–40 characters, bio 500, location 100 and
+preferred genres are at most 20 unique values of up to 50 characters each.
+New profiles default to `private`. Display name, username and privacy are
+visible to all; bio, location and genres follow `public | friends | private`.
+The Verified badge is reserved for a distinct account status and is not
+inferred from email verification.
 
-Friendship contract needs request, incoming/outgoing list, accept, decline/cancel, remove, and current relationship status. Define duplicate/crossed requests and permission effects after unfriend. Profile/friendship implementation ownership remains as stated above.
+Friend requests allow one pending relation per unordered pair. Duplicate
+same-direction requests conflict; crossed requests auto-accept; only the
+recipient accepts/declines and only the sender cancels. Either friend may
+unfriend, which immediately removes `friends`-level access; a new request is
+required to reconnect. Profile completion remains separate from verified
+email. Avatar operations are deferred until object storage, durable URL and
+access policies are approved; no local `file://` avatar URL is valid.
 
 ## 8. Playlists and collaborative editing
 
@@ -380,9 +395,9 @@ Existing scope, host-only audio and deferred fetch integration do not need reope
 | Sessions | Access/refresh lifetimes, rotation, revoke/reuse rules | Native secure-storage and renewal behavior during integration |
 | Email challenges | Delivery adapter, attempt limits, expiry/cooldown contract | Confirm six-digit UI and display server timers |
 | Google | Native ID-token audience verification, account-collision and link/unlink contract | Native iOS SDK wiring and secure exchange; use the approved client IDs and configuration in [the auth lifecycle guide](backend/docs/auth-lifecycle.md), not browser OAuth or redirect flow |
-| Profiles/friends | Shared account/auth/schema conventions and review | Bounded feature implementation per agreed ownership; username/privacy contract review |
-| Avatar upload | Upload flow, limits, storage and URL lifecycle | Image-picker payload capabilities and failure UX |
-| Verified badge | Distinct account status fields | Product meaning of badge |
+| Profiles/friends | Backend implementation and migration ownership; reuse F02 account/auth/schema | Client integration against [profile/friendship contract](backend/docs/profile-and-friendship.md) |
+| Avatar upload | Deferred pending approved durable object-storage and URL/access contract | Provide image-picker payload capabilities and review failure UX when resumed |
+| Verified badge | No badge until a distinct verified-account status exists | Define that status before exposing a badge |
 | Default permissions | Public/everyone defaults and capability response | Fix current private playlist default and unfinished policy UI later |
 | Voting | Atomic vote/ranking/cutoff contract | Confirm downvotes, duplicate/re-suggest and public Join behavior |
 | Invitations/codes | Lifecycle, access grants, alphabet/expiry/revocation | UI review for invite acceptance and six-character input |
@@ -402,7 +417,7 @@ Do not commit provider/email/payment secrets while exchanging configuration. Doc
 
 1. **Foundation verification:** install on documented Python, start isolated PostgreSQL, apply migration, prove `/health` ready/unavailable and run tests. Existing foundation is not proof of live DB verification.
 2. **Contract/authentication:** freeze API/session/error conventions; register → verify → login → retrieve self → refresh → reset/change password → logout. Include invalid/expired/reused challenges, refresh replay and revoked-session tests. Deliver local email procedure and Google exchange/linking tests.
-3. **Profiles/friends/catalog:** coordinate ownership; demonstrate own/friend/stranger privacy filtering and stable searchable song IDs with metadata.
+3. **Profiles/friends/catalog:** backend-owned profile/friendship implementation; demonstrate own/friend/stranger privacy filtering and stable searchable song IDs with metadata.
 4. **Playlist Editor:** two users collaborate; public/everyone defaults work; private visibility is protected; invitation/revocation and simultaneous add/remove/reorder/conflict/reconnect tests pass.
 5. **Track Vote/rooms:** public/private discovery and membership work; eligibility enforced; concurrent votes rank deterministically; one authenticated host controls playback transitions without double advance; participant phones do not play audio. Prove provider playback jointly on a real phone.
 6. **Hardening:** full selected-service acceptance, security/telemetry, CI, clean-clone setup, end-to-end integration and measured load evidence.

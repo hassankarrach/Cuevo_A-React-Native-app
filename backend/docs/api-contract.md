@@ -3,7 +3,10 @@
 This document records shared conventions for frontend review. The F01 contract
 slice implements the common error envelope; the email/password account routes
 are implemented separately under `/api/v1` and documented in the
-[auth lifecycle contract](./auth-lifecycle.md). other product routes, DTOs, resource-specific rules, and WebSocket delivery
+[auth lifecycle contract](./auth-lifecycle.md). Profile, privacy, music
+preference and friendship contracts are implemented under `/api/v1` and
+documented in the [profile/friendship contract](./profile-and-friendship.md).
+Other product routes, DTOs, resource-specific rules, and WebSocket delivery
 guarantees are not approved merely because they appear here or in generated
 OpenAPI. Preserve `GET /health`; it remains outside the `/api/v1` product
 namespace and retains its current readiness response.
@@ -90,7 +93,10 @@ The email/password account slice uses `Authorization: Bearer` with opaque,
 server-tracked access tokens. Its error codes, expiry, rotation, replay, and
 rate-limit policies are specified in the
 [auth lifecycle contract](./auth-lifecycle.md). Authentication behavior for
-other product routes remains subject to their own reviewed contracts.
+profile/friendship routes uses the same authenticated F02 principal. Their
+approved schemas, privacy rules, relationship states and routes are documented
+in the [profile/friendship contract](./profile-and-friendship.md); other
+product routes remain subject to their own reviewed contracts.
 
 ## Proposed WebSocket event envelope
 
@@ -119,8 +125,9 @@ operation IDs or proof of authorization.
 ## OpenAPI and approval boundary
 
 Generated OpenAPI publishes reusable response examples for the shared status
-mapping and root-level `x-proposed-api-conventions` and
-`x-proposed-websocket-event-envelope` extensions. These extensions make the
-proposals machine-discoverable; they do not approve product routes or schemas.
-Review the examples, error-code catalog, auth/session policy, and event
-delivery behavior with the frontend teammate before client integration.
+mapping, implemented authentication routes, and the approved
+profile/friendship routes. Root-level `x-proposed-api-conventions` and
+`x-proposed-websocket-event-envelope` extensions remain proposals; they do not
+approve other product routes or schemas. Avatar upload is not present in
+OpenAPI pending storage-contract approval. Review the profile/friendship
+contract with the frontend teammate before client integration.

@@ -1,17 +1,15 @@
 import logging
 import secrets
-from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.errors import APIError
+from app.auth.dependencies import Principal, current_principal as _current_principal
 from app.auth.email import AuthEmail, EmailDelivery, EmailDeliveryError
 from app.auth.google import (
     GoogleProviderUnavailable,
@@ -69,14 +67,7 @@ from app.db.session import get_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["authentication"])
-bearer_auth = HTTPBearer(auto_error=False, scheme_name="BearerAuth")
 GOOGLE_REAUTH_MAX_AGE = timedelta(minutes=5)
-
-
-@dataclass(frozen=True)
-class Principal:
-    account: Account
-    session: AuthSession
 
 
 def _settings(request: Request) -> Settings:
@@ -334,49 +325,6 @@ def _verify_challenge_code(
         db.commit()
         raise APIError(400, "CODE_INVALID", "The code could not be verified.")
     return challenge
-
-
-def _current_principal(
-    request: Request,
-    credentials: Annotated[
-        HTTPAuthorizationCredentials | None,
-        Depends(bearer_auth),
-    ] = None,
-    db: Session = Depends(get_db),
-) -> Principal:
-    if credentials is None or credentials.scheme.lower() != "bearer":
-        raise APIError(
-            401,
-            "AUTHENTICATION_REQUIRED",
-            "Authentication is required.",
-        )
-    token = credentials.credentials.strip()
-    if not token or len(token) > 128:
-        raise APIError(
-            401,
-            "AUTHENTICATION_REQUIRED",
-            "Authentication is required.",
-        )
-    settings = _settings(request)
-    digest = keyed_digest(settings, "access-token", token)
-    result = db.execute(
-        select(AuthSession, Account)
-        .join(Account, Account.id == AuthSession.account_id)
-        .where(AuthSession.access_token_digest == digest)
-    ).first()
-    if result is None:
-        raise APIError(
-            401,
-            "AUTHENTICATION_REQUIRED",
-            "Authentication is required.",
-        )
-    session, account = result
-    now = utc_now()
-    if session.revoked_at is not None:
-        raise APIError(401, "SESSION_REVOKED", "The session is no longer active.")
-    if session.absolute_expires_at <= now or session.access_expires_at <= now:
-        raise APIError(401, "SESSION_EXPIRED", "The session has expired.")
-    return Principal(account=account, session=session)
 
 
 def _revoke_account_sessions(db: Session, account_id: UUID, now: datetime) -> None:
