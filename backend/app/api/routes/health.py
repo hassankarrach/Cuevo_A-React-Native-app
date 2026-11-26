@@ -21,6 +21,32 @@ class HealthResponse(BaseModel):
     "/health",
     response_model=HealthResponse,
     summary="Process and database readiness",
+    responses={
+        status.HTTP_503_SERVICE_UNAVAILABLE: {
+            "model": HealthResponse,
+            "description": "The API is running, but the database is unavailable.",
+            "headers": {
+                "X-Request-ID": {
+                    "description": "Correlation ID for this request.",
+                    "schema": {"type": "string", "format": "uuid"},
+                }
+            },
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "databaseUnavailable": {
+                            "summary": "Database is not ready",
+                            "value": {
+                                "status": "unavailable",
+                                "api": "ready",
+                                "database": "unavailable",
+                            },
+                        }
+                    }
+                }
+            },
+        }
+    },
 )
 def health(db_engine: Engine = Depends(get_db_engine)) -> JSONResponse:
     try:

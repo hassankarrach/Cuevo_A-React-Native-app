@@ -4,7 +4,7 @@ Cuevo combines **cue/queue + vote**: people choose what plays next and build pla
 
 A React Native music app with live track voting and collaborative playlist editing.
 
-This two-person project is in the mobile UI and mock-interaction stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend foundation (FastAPI, PostgreSQL configuration, migration scaffold and health endpoint) is available. Real authentication, product-service APIs, audio playback, realtime collaboration and production bonuses are not implemented. The mobile UI remains on local data; API/fetch integration is deferred. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
+This two-person project is in the mobile UI and backend foundation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend now implements email/password account lifecycle and PostgreSQL session state, but mobile API wiring, profile/friendship data ownership, audio playback, realtime collaboration and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
 
 ## Development
 
@@ -33,10 +33,28 @@ Mac setup is complete; the current UI has been previewed in Expo Go on the iPhon
 
 - [Local setup and Mac handoff](doc/LOCAL_DEVELOPMENT.md)
 - [Current session handoff and next steps](doc/SESSION_HANDOFF.md)
+- [Google Sign-In frontend handoff](FRONTEND_TEAMMATE_HANDOFF.md)
 - [Project plan and requirements](doc/PROJECT_PLAN.md)
 - [Team responsibilities](doc/TEAM_RESPONSIBILITIES.md)
 - [Cuevo backend setup and migrations](backend/README.md)
 - [Project subject](en.subject.pdf)
+
+## Backend foundation
+
+The backend is separate from the mobile UI and uses FastAPI and PostgreSQL.
+Follow the [backend setup and verification guide](backend/README.md) before
+making backend or database changes. The email/password account lifecycle and
+its account/session migration are documented in the
+[auth lifecycle guide](backend/docs/auth-lifecycle.md); this does not wire
+mobile credentials or implement profile/friendship ownership. Google native
+ID-token verification and explicit account linking are implemented in the
+backend and documented in the [auth lifecycle guide](backend/docs/auth-lifecycle.md).
+The current checkout contains no iOS project or mobile source, so native SDK
+integration remains a client-side task. Facebook is not supported.
+The proposed shared HTTP, error and WebSocket conventions are documented in
+the [backend API contract](backend/docs/api-contract.md) and are pending
+frontend review; they do not represent mobile integration or implemented
+product routes.
 
 ## Checks
 

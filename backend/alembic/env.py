@@ -4,6 +4,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
+import app.auth.models
 from app.db.base import Base
 
 
@@ -12,11 +13,11 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 settings = get_settings()
-database_url = (
-    settings.test_database_url
-    if settings.environment == "test" and settings.test_database_url
-    else settings.database_url
-)
+database_url = settings.database_url
+if settings.environment == "test":
+    if settings.test_database_url is None:
+        raise ValueError("TEST_DATABASE_URL is required when ENVIRONMENT=test")
+    database_url = settings.test_database_url
 config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata

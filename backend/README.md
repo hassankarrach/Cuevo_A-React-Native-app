@@ -6,7 +6,7 @@ React Native/Expo frontend.
 
 ## Requirements
 
-- Python 3.12 recommended (the pinned dependencies do not install on Python 3.14)
+- Python 3.12 (the pinned dependencies were verified on this version)
 - Docker with Docker Compose (recommended for PostgreSQL)
 - PostgreSQL 16 if running PostgreSQL directly instead of Docker
 
@@ -23,6 +23,15 @@ python -m pip install -r requirements-dev.txt
 cp .env.example .env
 ```
 
+For local authentication, replace `AUTH_SECRET_KEY` in `.env` with a
+locally-generated key:
+
+```bash
+python -c 'import secrets; print(secrets.token_urlsafe(32))'
+```
+
+Keep the generated value private and do not commit `.env`.
+
 Start the local development database:
 
 ```bash
@@ -30,15 +39,47 @@ docker compose up -d postgres
 docker compose ps
 ```
 
+For email/password auth development, also start the local-only Mailpit inbox:
+
+```bash
+docker compose up -d mailpit
+```
+
+The SMTP listener is bound to `127.0.0.1:1025`; view development messages at
+`http://127.0.0.1:8025`. No real email vendor is configured. If local ports
+conflict, set `POSTGRES_HOST_PORT`, `MAILPIT_SMTP_HOST_PORT`, or
+`MAILPIT_UI_HOST_PORT` when invoking Compose.
+
 The Compose setup creates local `cuevo_dev` and isolated `cuevo_test`
-databases. The passwords and accounts are development-only placeholders.
+databases and publishes PostgreSQL only on localhost. The passwords and
+accounts are development-only placeholders.
 Do not use them outside local development or commit a real `.env` file.
 
-Initialize and upgrade the database:
+Initialize and upgrade the development database:
 
 ```bash
 alembic upgrade head
 ```
+
+For a fresh, isolated PostgreSQL instance and test database, use a dedicated
+Compose project name and unused local port. Its volume is separate from the
+normal development database:
+
+```bash
+POSTGRES_HOST_PORT=55432 docker compose -p cuevo-auth-tests up -d --wait postgres
+POSTGRES_HOST_PORT=55432 docker compose -p cuevo-auth-tests exec -T postgres pg_isready -U cuevo -d cuevo_test
+ENVIRONMENT=test alembic upgrade head
+```
+
+In test mode, `TEST_DATABASE_URL` is mandatory and must target a different
+database from `DATABASE_URL`. Alembic and the application use only the test URL
+in that mode; a missing or identical target fails configuration instead of
+falling back to the development database. Set `TEST_DATABASE_URL` in the
+ignored `.env` to the same localhost port (55432 in this example) for Alembic.
+The test suite overwrites inherited database URLs with local-only values; use
+`CUEVO_TEST_DATABASE_PORT=55432 python -m pytest` to run it against this custom
+port. The test host and database name are fixed to `127.0.0.1` and
+`cuevo_test`.
 
 Start the API:
 
@@ -48,18 +89,45 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 OpenAPI is available at `http://127.0.0.1:8000/docs`.
 
+## API and authentication
+
+The backend exposes F01's shared error envelope and request ID. The
+email/password account lifecycle is implemented under `/api/v1`; its routes,
+DTOs, approved challenge/session rules, errors, rate limits and examples are
+documented in the [auth lifecycle contract](docs/auth-lifecycle.md). It is not
+wired to mobile screens or credential storage. Google native ID-token
+verification, sign-in and explicit account link/unlink are implemented under
+`/api/v1`; configure the optional public Google client IDs in `.env` to enable
+them. The current checkout contains no iOS project or mobile source, so
+native SDK integration remains a client-side task. Facebook is not supported.
+Other product routes and
+shared proposals for pagination, revisions, viewer permissions and WebSocket
+delivery still require review. See the [API contract](docs/api-contract.md)
+for the shared envelope and remaining approval boundaries.
+
 ## Environment variables
 
 | Variable | Required | Purpose |
 |---|---:|---|
-| `DATABASE_URL` | Yes | PostgreSQL URL for the selected development or production environment |
-| `TEST_DATABASE_URL` | Test setup | PostgreSQL URL for isolated test database operations |
+| `DATABASE_URL` | Yes | PostgreSQL URL for the selected local development environment |
+| `TEST_DATABASE_URL` | Test mode | Isolated PostgreSQL URL required when `ENVIRONMENT=test` |
 | `ENVIRONMENT` | No | `development`, `test`, or `production`; defaults to `development` |
+| `AUTH_SECRET_KEY` | Yes | Private random key (at least 32 characters) for keyed challenge, token and rate-limit digests |
+| `EMAIL_SMTP_HOST` | No | Local SMTP host; defaults to `127.0.0.1` |
+| `EMAIL_SMTP_PORT` | No | Local SMTP port; defaults to `1025` |
+| `EMAIL_FROM_ADDRESS` | No | Local message sender; defaults to `no-reply@cuevo.local` |
+| `GOOGLE_IOS_CLIENT_ID` | No | Public iOS OAuth client ID used to validate Google `azp` when present |
+| `GOOGLE_SERVER_CLIENT_ID` | No | Public server OAuth client ID used as the Google ID-token audience |
 
-Example values in `.env.example` contain no real credentials. The application
-fails startup configuration if `DATABASE_URL` is missing or is not a PostgreSQL
-URL. Database passwords and provider secrets are never included in health
-responses or API startup logs.
+Example values in `.env.example` contain development-only placeholder
+credentials. The application fails startup configuration if `DATABASE_URL` is
+missing or is not a PostgreSQL URL. In test mode, `TEST_DATABASE_URL` is
+required and must not identify the same database as `DATABASE_URL`. Validation
+errors and health responses do not include database credentials.
+The example `AUTH_SECRET_KEY` is a placeholder and must be replaced with a
+fresh local value. `ENVIRONMENT=production` is intentionally rejected until a
+production email delivery adapter is approved; the current SMTP adapter is for
+local Mailpit only.
 
 ## PostgreSQL without Docker
 
@@ -100,23 +168,36 @@ alembic upgrade head
 alembic downgrade -1
 ```
 
-The initial `0001_initial` migration establishes migration metadata only and
-does not invent domain tables.
+The initial `0001_initial` migration establishes migration metadata only;
+`0002_account_auth` adds the email/password account/authentication tables and
+`0003_google_identity` adds provider identity mappings and allows passwordless
+Google accounts. To apply the migrations to the isolated test database, set
+`DATABASE_URL` to `cuevo_dev`, `TEST_DATABASE_URL` to `cuevo_test`, and run
+`ENVIRONMENT=test alembic upgrade head`.
 
 ## Tests
 
-Run the isolated unit and API tests:
+Run the unit and API tests from this directory:
 
 ```bash
 python -m pytest
 ```
 
-Tests do not use or modify a real development database; test settings point to
-`cuevo_test`. To verify PostgreSQL and migrations with Docker:
+The test configuration forcibly selects the isolated `cuevo_test` database;
+the auth integration tests use real PostgreSQL transactions and constraints,
+never a development or production database. Test mode rejects a missing test
+URL or one that resolves to the same host, port and database as the primary
+URL. Tests inject an in-memory email adapter; they do not send mail or log
+active challenge codes.
 
-```bash
-ENVIRONMENT=test \
-DATABASE_URL=postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_test \
-TEST_DATABASE_URL=postgresql+psycopg://cuevo:cuevo_dev_password@localhost:5432/cuevo_test \
-alembic upgrade head
-```
+See the [auth lifecycle guide](docs/auth-lifecycle.md) for local Mailpit,
+migration, request examples, and repeatable demo-account setup. See
+[foundation verification](docs/foundation-verification.md) for database
+isolation and environment verification.
+
+The handoff reports successful foundation dependency installation on Python
+3.12 and failure on Python 3.14. The F02 auth suite was also run on Python
+3.13.1 against PostgreSQL 16 (`31 passed`); Python 3.12 remains the documented
+baseline. Python 3.14 is not verified. See
+[foundation verification](docs/foundation-verification.md) for the recorded
+environment checks.
