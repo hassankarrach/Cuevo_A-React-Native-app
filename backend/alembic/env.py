@@ -7,6 +7,7 @@ from app.core.config import get_settings
 import app.auth.models
 import app.catalog.models
 import app.profiles.models
+import app.notifications.models
 from app.db.base import Base
 
 

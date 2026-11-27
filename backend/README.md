@@ -108,6 +108,10 @@ profile-privacy-gated reads. Other product routes and
 shared proposals for pagination, revisions, viewer permissions and WebSocket
 delivery still require review. See the [API contract](docs/api-contract.md)
 for the shared envelope and remaining approval boundaries.
+Authenticated in-app notifications provide recipient-scoped durable unread/read
+state and typed resource references. The API does not send OS push notifications,
+register native device tokens, or implement resource-specific notification
+producers; see the [notification contract](docs/notifications.md).
 
 The public song catalog is available at `GET /api/v1/songs` and
 `GET /api/v1/songs/{songId}`. Its source is the approved, static metadata
@@ -197,6 +201,8 @@ database. To apply the migrations to the isolated test database, set
 `DATABASE_URL` to `cuevo_dev`, `TEST_DATABASE_URL` to `cuevo_test`, and run
 `ENVIRONMENT=test alembic upgrade head`. `0006_song_catalog` adds empty song,
 genre, and provider-record tables; it does not seed metadata.
+`0007_notifications` adds durable recipient-scoped notification records and
+idempotency keys; it creates no sample notifications.
 
 ## Tests
 

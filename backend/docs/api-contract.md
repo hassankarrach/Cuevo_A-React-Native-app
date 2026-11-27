@@ -6,6 +6,8 @@ are implemented separately under `/api/v1` and documented in the
 [auth lifecycle contract](./auth-lifecycle.md). Profile, privacy, music
 preference, friendship and avatar contracts are implemented under `/api/v1` and
 documented in the [profile/friendship contract](./profile-and-friendship.md).
+The recipient-scoped in-app notification API is implemented under `/api/v1`
+and documented in the [notification contract](./notifications.md).
 Other product routes, DTOs, resource-specific rules, and WebSocket delivery
 guarantees are not approved merely because they appear here or in generated
 OpenAPI. Preserve `GET /health`; it remains outside the `/api/v1` product

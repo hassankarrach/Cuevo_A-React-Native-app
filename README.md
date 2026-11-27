@@ -4,7 +4,7 @@ Cuevo combines **cue/queue + vote**: people choose what plays next and build pla
 
 A React Native music app with live track voting and collaborative playlist editing.
 
-This two-person project is in the mobile UI and backend implementation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend implements email/password account lifecycle, PostgreSQL session state, profile/friendship APIs, and a public metadata catalog/search contract; mobile API wiring, audio playback, realtime collaboration and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
+This two-person project is in the mobile UI and backend implementation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend implements email/password account lifecycle, PostgreSQL session state, profile/friendship APIs, durable in-app notification state, and a public metadata catalog/search contract; mobile API wiring, OS push delivery, audio playback, realtime collaboration and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
 
 ## Development
 
@@ -39,6 +39,7 @@ Mac setup is complete; the current UI has been previewed in Expo Go on the iPhon
 - [Song catalog and metadata provenance](backend/data/SONG_CATALOG.md)
 - [Backend API contract](backend/docs/api-contract.md)
 - [Profile and friendship backend contract](backend/docs/profile-and-friendship.md)
+- [In-app notification API contract](backend/docs/notifications.md)
 - [Project plan and requirements](doc/PROJECT_PLAN.md)
 - [Team responsibilities](doc/TEAM_RESPONSIBILITIES.md)
 - [Cuevo backend setup and migrations](backend/README.md)
@@ -68,6 +69,10 @@ The proposed shared HTTP, error and WebSocket conventions are documented in
 the [backend API contract](backend/docs/api-contract.md) and are pending
 frontend review; they do not represent mobile integration. The song catalog
 routes are implemented and documented separately.
+The authenticated in-app notification API provides durable unread/read state
+and typed resource references; resource-specific producers and mobile wiring
+remain pending. Native notification permission and server push registration
+or delivery are not implemented.
 
 ## Checks
 

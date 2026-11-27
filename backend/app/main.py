@@ -13,6 +13,7 @@ from app.api.errors import (
 from app.api.routes.health import router as health_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.profiles import router as profiles_router
+from app.notifications.routes import router as notifications_router
 from app.catalog.routes import router as catalog_router
 from app.auth.email import EmailDelivery, SMTPEmailDelivery
 from app.auth.google import VerifiedGoogleIdentity, verify_google_id_token
@@ -66,6 +67,7 @@ def create_app(
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(profiles_router)
+    app.include_router(notifications_router)
     app.include_router(catalog_router)
     return app
 
