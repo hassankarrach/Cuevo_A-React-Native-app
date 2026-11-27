@@ -109,6 +109,18 @@ shared proposals for pagination, revisions, viewer permissions and WebSocket
 delivery still require review. See the [API contract](docs/api-contract.md)
 for the shared envelope and remaining approval boundaries.
 
+The public song catalog is available at `GET /api/v1/songs` and
+`GET /api/v1/songs/{songId}`. Its source is the approved, static metadata
+artifact at `backend/data/songs.json`; it is not refreshed automatically.
+Migrations create an empty catalog. The explicit `python -m
+app.catalog.importer` command imports the approved records into a guarded local
+development database only. `python -m app.dev_seed` adds the deterministic
+three-song F07 fixture alongside the demo accounts. Neither command runs in
+production or from a migration. See [song catalog provenance and API
+contract](data/SONG_CATALOG.md). Provider IDs are metadata references, not
+internal song IDs or playable media; artwork URLs and image files are not
+served, and no playback SDK is included.
+
 ## Environment variables
 
 | Variable | Required | Purpose |
@@ -183,7 +195,8 @@ The `0004` downgrade drops profile and friendship data; the `0005` downgrade
 drops only avatar data. Only test downgrades against an isolated disposable
 database. To apply the migrations to the isolated test database, set
 `DATABASE_URL` to `cuevo_dev`, `TEST_DATABASE_URL` to `cuevo_test`, and run
-`ENVIRONMENT=test alembic upgrade head`.
+`ENVIRONMENT=test alembic upgrade head`. `0006_song_catalog` adds empty song,
+genre, and provider-record tables; it does not seed metadata.
 
 ## Tests
 
@@ -207,13 +220,19 @@ limits/privacy, friendship transitions, and disposable integration-test
 accounts. See [local demo accounts](docs/development-demo.md) for persistent,
 guarded development-only seed instructions and credentials. See
 [foundation verification](docs/foundation-verification.md) for database
-isolation and environment verification.
+isolation and environment verification. The moved
+[backend handoff](docs/BACKEND_TEAMMATE_HANDOFF.md) and
+[frontend handoff](docs/FRONTEND_TEAMMATE_HANDOFF.md) retain project context;
+the [original project request](docs/message.txt) records the initial
+requirements. [Song catalog documentation](data/SONG_CATALOG.md) records the
+approved static metadata source, field mapping, import commands, stable IDs,
+and search contract. Apple metadata records do not provide playable audio or
+an artwork license.
 
-Before the avatar additions, the 99-test backend suite passed on Python
-3.12.16 and 3.13.18 against isolated PostgreSQL 16. The latest avatar-aware
-suite passed 108 tests on Python 3.12.16; the post-avatar suite has not yet
-been rerun on Python 3.13.18. Python 3.12 remains the documented baseline. The
-handoff reports dependency-installation failure on Python 3.14, which remains
-unverified. See
+The current 125-test backend suite passed on Python 3.13.1 against isolated
+PostgreSQL 16. Migration `0006_song_catalog` was applied from an empty
+database, and Alembic reported no model/schema drift. Python 3.12 remains the
+documented baseline; the handoff reports dependency-installation failure on
+Python 3.14, which remains unverified. See
 [foundation verification](docs/foundation-verification.md) for the recorded
 environment checks.

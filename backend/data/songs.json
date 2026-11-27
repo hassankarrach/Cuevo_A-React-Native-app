@@ -1,0 +1,842 @@
+[
+  {
+    "id": "winners-2005-jamais-ndiro-pause",
+    "title": "Jamais Ndiro Pause",
+    "artist": "Winners 2005",
+    "album": "Jamais Ndiro Pause - Single",
+    "durationMs": 112014,
+    "duration": "1:52",
+    "genre": "Worldwide",
+    "releaseDate": "2025-02-19",
+    "coverFile": "jamais-ndiro-pause.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/f5/96/5a/f5965a66-a8ae-8f57-a6d4-46f72198f548/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1799696166",
+      "url": "https://music.apple.com/us/album/jamais-ndiro-pause/1799696154?i=1799696166&uo=4",
+      "retrievedOn": "2026-11-18"
+    },
+    "genres": [
+      "Worldwide"
+    ]
+  },
+  {
+    "id": "winners-2005-allo-bombero",
+    "title": "Allo Bombero",
+    "artist": "Winners 2005",
+    "album": "Allo Bombero - Single",
+    "durationMs": 125070,
+    "duration": "2:05",
+    "genre": "Worldwide",
+    "releaseDate": "2025-06-21",
+    "coverFile": "allo-bombero.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/9f/b9/23/9fb9233e-affe-a9ce-3f6e-e0f80591c7dd/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1827211524",
+      "url": "https://music.apple.com/us/album/allo-bombero/1827211522?i=1827211524&uo=4",
+      "retrievedOn": "2026-11-18"
+    },
+    "genres": [
+      "Worldwide"
+    ]
+  },
+  {
+    "id": "winners-2005-giorno-notte",
+    "title": "Giorno Notte",
+    "artist": "Winners 2005",
+    "album": "Giorno Notte - Single",
+    "durationMs": 109515,
+    "duration": "1:50",
+    "genre": "Worldwide",
+    "releaseDate": "2025-01-08",
+    "coverFile": "giorno-notte.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/4e/e0/41/4ee0413f-aa1f-bc27-7c43-2d9ab920bee6/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1796115440",
+      "url": "https://music.apple.com/us/album/giorno-notte/1796115168?i=1796115440&uo=4",
+      "retrievedOn": "2026-11-18"
+    },
+    "genres": [
+      "Worldwide"
+    ]
+  },
+  {
+    "id": "winners-2005-lasciatemi-tifare",
+    "title": "Lasciatemi Tifare",
+    "artist": "Winners 2005",
+    "album": "Lasciatemi Tifare - Single",
+    "durationMs": 222640,
+    "duration": "3:43",
+    "genre": "Fitness & Workout",
+    "releaseDate": "2024-04-17",
+    "coverFile": "lasciatemi-tifare.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/aa/ff/d5/aaffd5fa-2311-494d-a00e-7052cc63398f/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1748762073",
+      "url": "https://music.apple.com/us/album/lasciatemi-tifare/1748762071?i=1748762073&uo=4",
+      "retrievedOn": "2026-11-18"
+    },
+    "genres": [
+      "Fitness & Workout"
+    ]
+  },
+  {
+    "id": "winners-2005-omri-nsito-maaha",
+    "title": "عمري نسيتو معاها",
+    "artist": "Winners 2005",
+    "album": "عمري نسيتو معاها - Single",
+    "durationMs": 268100,
+    "duration": "4:28",
+    "genre": "Worldwide",
+    "releaseDate": "2024-12-08",
+    "coverFile": "omri-nsito-maaha.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/b5/90/d6/b590d6ab-47a3-d5a5-ed67-4e1071e9da60/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1789104313",
+      "url": "https://music.apple.com/us/album/%D8%B9%D9%85%D8%B1%D9%8A-%D9%86%D8%B3%D9%8A%D8%AA%D9%88-%D9%85%D8%B9%D8%A7%D9%87%D8%A7/1789104311?i=1789104313&uo=4",
+      "retrievedOn": "2026-11-18"
+    },
+    "genres": [
+      "Worldwide"
+    ]
+  },
+  {
+    "id": "apple-1538003843",
+    "title": "Levitating",
+    "artist": "Dua Lipa",
+    "album": "Future Nostalgia",
+    "durationMs": 203808,
+    "duration": "3:24",
+    "genre": "Pop",
+    "genres": [
+      "Pop"
+    ],
+    "releaseDate": "2020-03-27",
+    "coverFile": "dualipa-levitating-1538003843.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/6c/11/d6/6c11d681-aa3a-d59e-4c2e-f77e181026ab/190295092665.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1538003843",
+      "url": "https://music.apple.com/us/album/levitating/1538003494?i=1538003843&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1615585008",
+    "title": "As It Was",
+    "artist": "Harry Styles",
+    "album": "Harry's House",
+    "durationMs": 167303,
+    "duration": "2:47",
+    "genre": "Pop",
+    "genres": [
+      "Pop"
+    ],
+    "releaseDate": "2022-03-31",
+    "coverFile": "harrystyles-as-it-was-1615585008.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music126/v4/2a/19/fb/2a19fb85-2f70-9e44-f2a9-82abe679b88e/886449990061.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1615585008",
+      "url": "https://music.apple.com/us/album/as-it-was/1615584999?i=1615585008&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1544494392",
+    "title": "Hello",
+    "artist": "Adele",
+    "album": "25",
+    "durationMs": 295502,
+    "duration": "4:56",
+    "genre": "Pop",
+    "genres": [
+      "Pop"
+    ],
+    "releaseDate": "2015-10-23",
+    "coverFile": "adele-hello-1544494392.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/08/8c/24/088c2405-2e33-801b-5c38-e967f2c01e69/191404113974.png/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1544494392",
+      "url": "https://music.apple.com/us/album/hello/1544494115?i=1544494392&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-269573364",
+    "title": "Billie Jean",
+    "artist": "Michael Jackson",
+    "album": "Thriller",
+    "durationMs": 293802,
+    "duration": "4:54",
+    "genre": "Pop",
+    "genres": [
+      "Pop"
+    ],
+    "releaseDate": "1982-11-29",
+    "coverFile": "michaeljackson-billie-jean-269573364.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/32/4f/fd/324ffda2-9e51-8f6a-0c2d-c6fd2b41ac55/074643811224.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "269573364",
+      "url": "https://music.apple.com/us/album/billie-jean/269572838?i=269573364&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1440882165",
+    "title": "HUMBLE.",
+    "artist": "Kendrick Lamar",
+    "album": "DAMN.",
+    "durationMs": 177000,
+    "duration": "2:57",
+    "genre": "Hip-Hop/Rap",
+    "genres": [
+      "Hip-hop"
+    ],
+    "releaseDate": "2017-03-30",
+    "coverFile": "kendricklamar-humble-1440882165.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/ab/16/ef/ab16efe9-e7f1-66ec-021c-5592a23f0f9e/17UMGIM88793.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1440882165",
+      "url": "https://music.apple.com/us/album/humble/1440881722?i=1440882165&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1600773036",
+    "title": "No Role Modelz",
+    "artist": "J. Cole",
+    "album": "2014 Forest Hills Drive",
+    "durationMs": 292810,
+    "duration": "4:53",
+    "genre": "Hip-Hop/Rap",
+    "genres": [
+      "Hip-hop"
+    ],
+    "releaseDate": "2014-12-09",
+    "coverFile": "jcole-no-role-modelz-1600773036.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/ee/28/67/ee286794-6c33-a8c2-5c37-c04f1cb5e8a6/21UM1IM54415.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1600773036",
+      "url": "https://music.apple.com/us/album/no-role-modelz/1600772499?i=1600773036&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-856131732",
+    "title": "N.Y. State of Mind",
+    "artist": "Nas",
+    "album": "Illmatic",
+    "durationMs": 294000,
+    "duration": "4:54",
+    "genre": "Hip-Hop/Rap",
+    "genres": [
+      "Hip-hop"
+    ],
+    "releaseDate": "1994-04-19",
+    "coverFile": "nas-n-y-state-of-mind-856131732.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/b9/eb/cc/b9ebccbc-5ba4-2cdb-5332-b065739abd9a/886444567619.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "856131732",
+      "url": "https://music.apple.com/us/album/n-y-state-of-mind/856131729?i=856131732&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-83134409",
+    "title": "Get Ur Freak On (Amended LP Version)",
+    "artist": "Missy Elliott",
+    "album": "Miss E...So Addictive",
+    "durationMs": 237011,
+    "duration": "3:57",
+    "genre": "Hip-Hop/Rap",
+    "genres": [
+      "Hip-hop"
+    ],
+    "releaseDate": "2001-03-06",
+    "coverFile": "missyelliott-get-ur-freak-on-amended-lp-version-83134409.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music/71/c2/4f/mzi.gsutnxrb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "83134409",
+      "url": "https://music.apple.com/us/album/get-ur-freak-on-amended-lp-version/83134491?i=83134409&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1658650499",
+    "title": "Snooze",
+    "artist": "SZA",
+    "album": "SOS",
+    "durationMs": 201800,
+    "duration": "3:22",
+    "genre": "R&B/Soul",
+    "genres": [
+      "R&B"
+    ],
+    "releaseDate": "2022-12-09",
+    "coverFile": "sza-snooze-1658650499.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music122/v4/62/93/13/6293132e-20ff-67ab-3d1f-96bb6797a6ba/196589564955.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1658650499",
+      "url": "https://music.apple.com/us/album/snooze/1658650093?i=1658650499&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1146195714",
+    "title": "Pink + White",
+    "artist": "Frank Ocean",
+    "album": "Blonde",
+    "durationMs": 184516,
+    "duration": "3:05",
+    "genre": "Pop",
+    "genres": [
+      "R&B"
+    ],
+    "releaseDate": "2016-08-20",
+    "coverFile": "frankocean-pink-white-1146195714.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/bb/45/68/bb4568f3-68cd-619d-fbcb-4e179916545d/BlondCover-Final.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1146195714",
+      "url": "https://music.apple.com/us/album/pink-white/1146195596?i=1146195714&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-255343130",
+    "title": "If I Ain't Got You",
+    "artist": "Alicia Keys",
+    "album": "The Diary of Alicia Keys",
+    "durationMs": 228707,
+    "duration": "3:49",
+    "genre": "R&B/Soul",
+    "genres": [
+      "R&B"
+    ],
+    "releaseDate": "2003-12-02",
+    "coverFile": "aliciakeys-if-i-ain-t-got-you-255343130.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/c2/07/c6/c207c6ee-e3f1-cad2-1259-69a3ebd08b5c/828765571227.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "255343130",
+      "url": "https://music.apple.com/us/album/if-i-aint-got-you/255342344?i=255343130&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-268532564",
+    "title": "U Got It Bad",
+    "artist": "USHER",
+    "album": "8701",
+    "durationMs": 247840,
+    "duration": "4:08",
+    "genre": "R&B/Soul",
+    "genres": [
+      "R&B"
+    ],
+    "releaseDate": "2001-07-09",
+    "coverFile": "usher-u-got-it-bad-268532564.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/e7/1f/06/e71f062b-71c8-3b06-49d3-a0842a759684/078221471527.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "268532564",
+      "url": "https://music.apple.com/us/album/u-got-it-bad/268532446?i=268532564&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-696886431",
+    "title": "Around the World",
+    "artist": "Daft Punk",
+    "album": "Homework",
+    "durationMs": 429533,
+    "duration": "7:10",
+    "genre": "Dance",
+    "genres": [
+      "House"
+    ],
+    "releaseDate": "1997-01-20",
+    "coverFile": "daftpunk-around-the-world-696886431.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Features115/v4/34/8d/c7/348dc71c-d75e-9baf-671a-994e9e74b018/dj.pimdxdmf.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "696886431",
+      "url": "https://music.apple.com/us/album/around-the-world/696884422?i=696886431&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-692624266",
+    "title": "Lady (Hear Me Tonight)",
+    "artist": "Modjo",
+    "album": "Modjo (Remastered)",
+    "durationMs": 307154,
+    "duration": "5:07",
+    "genre": "Pop",
+    "genres": [
+      "House"
+    ],
+    "releaseDate": "2000-09-04",
+    "coverFile": "modjo-lady-hear-me-tonight-692624266.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/f5/25/2b/f5252b6e-0659-890b-7e9d-0e691944b95b/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "692624266",
+      "url": "https://music.apple.com/us/album/lady-hear-me-tonight/692624255?i=692624266&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-693246521",
+    "title": "When Love Takes Over (feat. Kelly Rowland)",
+    "artist": "David Guetta",
+    "album": "One Love (Deluxe)",
+    "durationMs": 191000,
+    "duration": "3:11",
+    "genre": "Electronica",
+    "genres": [
+      "House"
+    ],
+    "releaseDate": "2009-04-21",
+    "coverFile": "davidguetta-when-love-takes-over-feat-kelly-rowland-693246521.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/0a/0c/4f/0a0c4f12-1489-3bda-ab41-7cb04f181e5f/5099990837951.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "693246521",
+      "url": "https://music.apple.com/us/album/when-love-takes-over-feat-kelly-rowland/693244948?i=693246521&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-301002607",
+    "title": "Show Me Love",
+    "artist": "Robin S.",
+    "album": "Show Me Love",
+    "durationMs": 269440,
+    "duration": "4:29",
+    "genre": "Pop",
+    "genres": [
+      "House"
+    ],
+    "releaseDate": "1990-10-13",
+    "coverFile": "robins-show-me-love-301002607.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/8f/fc/e8/8ffce812-173c-5d0d-a264-07f81247c212/mzi.cdsdlqei.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "301002607",
+      "url": "https://music.apple.com/us/album/show-me-love/301002604?i=301002607&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-6781024333",
+    "title": "Somebody To Love",
+    "artist": "Queen",
+    "album": "A Day At The Races (Deluxe Edition)",
+    "durationMs": 298933,
+    "duration": "4:59",
+    "genre": "Rock",
+    "genres": [
+      "Rock"
+    ],
+    "releaseDate": "1976-11-12",
+    "coverFile": "queen-somebody-to-love-6781024333.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/54/7c/fb/547cfbf0-1df2-9907-20a9-b486d3e832c4/602527644202.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "6781024333",
+      "url": "https://music.apple.com/us/album/somebody-to-love/6781024048?i=6781024333&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1440783636",
+    "title": "Come As You Are",
+    "artist": "Nirvana",
+    "album": "Nevermind",
+    "durationMs": 218971,
+    "duration": "3:39",
+    "genre": "Rock",
+    "genres": [
+      "Rock"
+    ],
+    "releaseDate": "1991-09-24",
+    "coverFile": "nirvana-come-as-you-are-1440783636.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/95/fd/b9/95fdb9b2-6d2b-92a6-97f2-51c1a6d77f1a/00602527874609.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1440783636",
+      "url": "https://music.apple.com/us/album/come-as-you-are/1440783617?i=1440783636&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-594061856",
+    "title": "Dreams",
+    "artist": "Fleetwood Mac",
+    "album": "Rumours",
+    "durationMs": 257800,
+    "duration": "4:18",
+    "genre": "Rock",
+    "genres": [
+      "Rock"
+    ],
+    "releaseDate": "1977-02-04",
+    "coverFile": "fleetwoodmac-dreams-594061856.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/4d/13/ba/4d13bac3-d3d5-7581-2c74-034219eadf2b/081227970949.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "594061856",
+      "url": "https://music.apple.com/us/album/dreams/594061854?i=594061856&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1440745782",
+    "title": "Paint It, Black",
+    "artist": "The Rolling Stones",
+    "album": "Aftermath (US Version)",
+    "durationMs": 202453,
+    "duration": "3:22",
+    "genre": "Rock",
+    "genres": [
+      "Rock"
+    ],
+    "releaseDate": "1966-04-15",
+    "coverFile": "therollingstones-paint-it-black-1440745782.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/cd/89/04/cd890449-e58f-7257-2c60-9c8c31f24ce3/13ABKIM00063.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1440745782",
+      "url": "https://music.apple.com/us/album/paint-it-black/1440745549?i=1440745782&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-268443097",
+    "title": "So What",
+    "artist": "Miles Davis",
+    "album": "Kind of Blue",
+    "durationMs": 547983,
+    "duration": "9:08",
+    "genre": "Jazz",
+    "genres": [
+      "Jazz"
+    ],
+    "releaseDate": "1959-08-17",
+    "coverFile": "milesdavis-so-what-268443097.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music/7f/9f/d6/mzi.vtnaewef.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "268443097",
+      "url": "https://music.apple.com/us/album/so-what/268443092?i=268443097&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1440954907",
+    "title": "Naima",
+    "artist": "John Coltrane",
+    "album": "Afro Blue Impressions (Expanded Edition)",
+    "durationMs": 485570,
+    "duration": "8:06",
+    "genre": "Jazz",
+    "genres": [
+      "Jazz"
+    ],
+    "releaseDate": "1973-01-01",
+    "coverFile": "johncoltrane-naima-1440954907.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music118/v4/cd/04/41/cd044178-5a50-1420-6ffb-9eb9d84bfa68/00888072346079.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1440954907",
+      "url": "https://music.apple.com/us/album/naima/1440954901?i=1440954907&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-193085790",
+    "title": "Take Five",
+    "artist": "The Dave Brubeck Quartet",
+    "album": "Time Out",
+    "durationMs": 328832,
+    "duration": "5:29",
+    "genre": "Jazz",
+    "genres": [
+      "Jazz"
+    ],
+    "releaseDate": "1959-12-14",
+    "coverFile": "thedavebrubeckquartet-take-five-193085790.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/7a/e3/06/7ae30672-0c73-a4d4-0a74-624eefc2843b/dj.ytdbjvto.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "193085790",
+      "url": "https://music.apple.com/us/album/take-five/193085545?i=193085790&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1469581620",
+    "title": "Misty",
+    "artist": "Ella Fitzgerald",
+    "album": "Let No Man Write My Epitaph (Soundtrack from the Motion Picture)",
+    "durationMs": 174912,
+    "duration": "2:55",
+    "genre": "Jazz",
+    "genres": [
+      "Jazz"
+    ],
+    "releaseDate": "1960-01-01",
+    "coverFile": "ellafitzgerald-misty-1469581620.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/78/85/50/7885506c-93aa-0569-3e1d-4d5badd75922/14UMGIM01455.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1469581620",
+      "url": "https://music.apple.com/us/album/misty/1469581412?i=1469581620&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1623677811",
+    "title": "Last Last",
+    "artist": "Burna Boy",
+    "album": "Love, Damini",
+    "durationMs": 172342,
+    "duration": "2:52",
+    "genre": "Afro-fusion",
+    "genres": [
+      "Afrobeats"
+    ],
+    "releaseDate": "2022-05-13",
+    "coverFile": "burnaboy-last-last-1623677811.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/ca/eb/31/caeb3173-eaf0-0cd5-65ea-585adfe312ba/075679745156.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1623677811",
+      "url": "https://music.apple.com/us/album/last-last/1623677591?i=1623677811&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1614063459",
+    "title": "Calm Down",
+    "artist": "Rema",
+    "album": "Rave & Roses",
+    "durationMs": 219669,
+    "duration": "3:40",
+    "genre": "Afrobeats",
+    "genres": [
+      "Afrobeats"
+    ],
+    "releaseDate": "2022-02-11",
+    "coverFile": "rema-calm-down-1614063459.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music116/v4/b2/b4/7c/b2b47cf9-d8e2-53f6-5c62-c974d665c95b/22UMGIM08994.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1614063459",
+      "url": "https://music.apple.com/us/album/calm-down/1614063395?i=1614063459&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-6783430854",
+    "title": "ESSENCE",
+    "artist": "Justin Bieber, Wizkid & Tems",
+    "album": "SWAG LIVE FROM COACHELLA (Weekend I)",
+    "durationMs": 252053,
+    "duration": "4:12",
+    "genre": "Pop",
+    "genres": [
+      "Afrobeats"
+    ],
+    "releaseDate": "2026-06-26",
+    "coverFile": "justinbieberwizkidtems-essence-6783430854.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/06/1c/73/061c7321-52c9-5532-4fb5-5d704e43e7a9/ticket.efkjkgmd.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "6783430854",
+      "url": "https://music.apple.com/us/album/essence/6783430401?i=6783430854&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-663097965",
+    "title": "Do I Wanna Know?",
+    "artist": "Arctic Monkeys",
+    "album": "AM",
+    "durationMs": 272394,
+    "duration": "4:32",
+    "genre": "Alternative",
+    "genres": [
+      "Indie"
+    ],
+    "releaseDate": "2013-06-19",
+    "coverFile": "arcticmonkeys-do-i-wanna-know-663097965.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/69/9c/b5/699cb5d6-115c-ff73-9d26-e57ea4350d72/887828031795.png/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "663097965",
+      "url": "https://music.apple.com/us/album/do-i-wanna-know/663097964?i=663097965&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1497230972",
+    "title": "Borderline",
+    "artist": "Tame Impala",
+    "album": "The Slow Rush",
+    "durationMs": 237800,
+    "duration": "3:58",
+    "genre": "Alternative",
+    "genres": [
+      "Indie"
+    ],
+    "releaseDate": "2019-04-12",
+    "coverFile": "tameimpala-borderline-1497230972.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/65/e3/e7/65e3e740-b69f-f5cb-f2e6-7dedb5265ac9/19UMGIM96748.rgb.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1497230972",
+      "url": "https://music.apple.com/us/album/borderline/1497230760?i=1497230972&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1850810463",
+    "title": "Intro",
+    "artist": "The xx",
+    "album": "xx",
+    "durationMs": 127920,
+    "duration": "2:08",
+    "genre": "Alternative",
+    "genres": [
+      "Indie"
+    ],
+    "releaseDate": "2009-08-14",
+    "coverFile": "thexx-intro-1850810463.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music221/v4/28/44/8e/28448e14-19be-438b-bc9b-8c1d3f68f578/609008295069.png/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1850810463",
+      "url": "https://music.apple.com/us/album/intro/1850810462?i=1850810463&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1102337226",
+    "title": "Ya Denya",
+    "artist": "Labess",
+    "album": "La route",
+    "durationMs": 353803,
+    "duration": "5:54",
+    "genre": "Arabic",
+    "genres": [
+      "World"
+    ],
+    "releaseDate": "2016-04-29",
+    "coverFile": "labess-ya-denya-1102337226.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music49/v4/ef/3b/b9/ef3bb998-f9d3-755a-0f75-6de1ab7bb9e8/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1102337226",
+      "url": "https://music.apple.com/us/album/ya-denya/1102336852?i=1102337226&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1132087986",
+    "title": "Les septs couleurs",
+    "artist": "Labess",
+    "album": "Tout va bien",
+    "durationMs": 351960,
+    "duration": "5:52",
+    "genre": "Worldwide",
+    "genres": [
+      "World"
+    ],
+    "releaseDate": "2007-03-20",
+    "coverFile": "labess-les-septs-couleurs-1132087986.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music20/v4/85/7e/68/857e68fe-af6a-e3b3-aeda-718df728264e/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1132087986",
+      "url": "https://music.apple.com/us/album/les-septs-couleurs/1132085184?i=1132087986&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1132085922",
+    "title": "El Kess Yaddour",
+    "artist": "Labess",
+    "album": "Identité",
+    "durationMs": 216507,
+    "duration": "3:37",
+    "genre": "Worldwide",
+    "genres": [
+      "World"
+    ],
+    "releaseDate": "2012-05-23",
+    "coverFile": "labess-el-kess-yaddour-1132085922.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/29/f6/e8/29f6e866-62ab-35af-74f7-ddd241707a50/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1132085922",
+      "url": "https://music.apple.com/us/album/el-kess-yaddour/1132084934?i=1132085922&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1751970743",
+    "title": "Rosa Que Linda Eres",
+    "artist": "Labess",
+    "album": "Rosa Que Linda Eres - Single",
+    "durationMs": 288113,
+    "duration": "4:48",
+    "genre": "Arabic",
+    "genres": [
+      "World"
+    ],
+    "releaseDate": "2024-07-05",
+    "coverFile": "labess-rosa-que-linda-eres-1751970743.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music211/v4/20/55/c8/2055c866-5e96-bd70-d1ca-0cedf2cd01e0/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1751970743",
+      "url": "https://music.apple.com/us/album/rosa-que-linda-eres/1751970412?i=1751970743&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  },
+  {
+    "id": "apple-1583957157",
+    "title": "Yemma",
+    "artist": "Labess",
+    "album": "Yemma",
+    "durationMs": 303840,
+    "duration": "5:04",
+    "genre": "Arabic",
+    "genres": [
+      "World"
+    ],
+    "releaseDate": "2021-07-23",
+    "coverFile": "labess-yemma-1583957157.jpg",
+    "artworkUrl": "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/77/37/9c/77379cf3-293f-fa41-f20a-f99c718a226f/cover.jpg/600x600bb.jpg",
+    "source": {
+      "provider": "Apple iTunes Search API",
+      "trackId": "1583957157",
+      "url": "https://music.apple.com/us/album/yemma/1583956698?i=1583957157&uo=4",
+      "retrievedOn": "2026-11-18"
+    }
+  }
+]

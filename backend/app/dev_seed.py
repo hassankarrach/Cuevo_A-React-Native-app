@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.auth.models import Account
 from app.auth.security import hash_password, utc_now
+from app.catalog.importer import seed_demo_catalog
 from app.core.config import Settings, get_settings
 from app.profiles.models import Profile
 
@@ -111,12 +112,15 @@ def main() -> None:
     try:
         with session_factory() as db:
             result = seed_demo_accounts(db)
+            catalog_result = seed_demo_catalog(db)
     finally:
         engine.dispose()
 
     print(
         f"Created {len(result.created_emails)} demo account(s); "
-        f"skipped {len(result.skipped_emails)} reserved email(s)."
+        f"skipped {len(result.skipped_emails)} reserved email(s); "
+        f"created {len(catalog_result.created_ids)} demo song(s); "
+        f"skipped {len(catalog_result.skipped_ids)} existing song(s)."
     )
 
 

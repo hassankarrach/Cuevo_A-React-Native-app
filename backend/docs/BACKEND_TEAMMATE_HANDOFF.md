@@ -4,7 +4,7 @@ Prepared 2026-11-24 for the backend teammate and their coding agent.
 
 ## 1. Purpose and how to use this document
 
-Build the complete backend for Cuevo while preserving the existing mobile experience. This document supplies frontend facts, agreed scope, suggested API shapes, remaining decisions, ownership, and acceptance criteria. It supersedes `message.txt` where this document is more specific.
+Build the complete backend for Cuevo while preserving the existing mobile experience. This document supplies frontend facts, agreed scope, suggested API shapes, remaining decisions, ownership, and acceptance criteria. It supersedes [`message.txt`](./message.txt) where this document is more specific.
 
 Status labels matter:
 
@@ -135,7 +135,7 @@ Mapping requirements:
 
 `mobile/src/data/songs.json` contains 40 metadata fixtures. `songs.ts` adds local bundled covers. Each JSON record has `id`, `title`, `artist`, `album`, `durationMs`, formatted `duration`, `genre`, `genres`, `releaseDate`, `coverFile`, `artworkUrl`, and `source: { provider, trackId, url, retrievedOn }`.
 
-These are Apple iTunes Search metadata/artwork references, **not playable audio assets or a chosen playback SDK**. Provider track IDs are strings. Preserve the provider and ID separately from the internal song ID. Do not infer legal playback access or provider account capability from this catalog. See `mobile/src/data/SONG_CATALOG.md` for provenance.
+These are Apple iTunes Search metadata/artwork references, **not playable audio assets or a chosen playback SDK**. Provider track IDs are strings. Preserve the provider and ID separately from the internal song ID. Do not infer playback capability from this catalog. The owner-approved metadata-only static artifact now lives at `backend/data/songs.json`; its provenance, field mapping and no-refresh policy are documented in [`SONG_CATALOG.md`](../data/SONG_CATALOG.md). Artwork is not included or served.
 
 ### Notifications and payment summaries
 

@@ -33,6 +33,14 @@ records, or clean other database contents. If another record (for example, a
 username) conflicts during creation, the whole transaction fails rather than
 partially seeding accounts.
 
-F07/F08 may extend this same command with additive sample playlists and rooms
-after those features and approved catalog records exist. No playlist or room
-tables or records are created by the current seed command.
+The command also adds three catalog records from the approved static
+`backend/data/songs.json` artifact, using opaque deterministic internal IDs.
+Existing catalog rows and their metadata are never overwritten. The full
+approved 40-record metadata artifact can be imported separately with
+`python -m app.catalog.importer`; this command uses the same local-development
+database guard and is additive. Neither command runs in migrations or
+production. The exact F07 playlist fixture IDs and provenance are documented
+in [the song catalog contract](../data/SONG_CATALOG.md).
+
+F07/F08 may extend this same command with additive sample playlists and rooms.
+No playlist or room tables or records are created by the current seed command.

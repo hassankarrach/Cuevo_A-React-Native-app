@@ -28,6 +28,40 @@ These are proposed wire conventions, not a promise that every product DTO or
 route already exists. Date-only values, limits, cursor expiry, retry retention,
 and individual resource permissions require review with the frontend teammate.
 
+## Public song catalog
+
+The implemented catalog routes are `GET /api/v1/songs` and
+`GET /api/v1/songs/{songId}`. Search accepts optional `q` (up to 100
+characters), exact `genre` (up to 80 characters), `limit` (1–50, default 20),
+and `cursor` (up to 160 characters). Text searches title, artist, and album;
+genre matching is case-insensitive. Results are ordered by normalized title,
+normalized artist, then opaque internal UUID. The cursor is bound to the
+normalized filters and is not an authorization credential. Search responses
+contain `items` and `nextCursor`; no total count is returned.
+
+The response `id` is the server's opaque internal song ID. Provider name and
+track ID appear only in each `sources` object and are never accepted as a
+song ID. Provider uniqueness is case-insensitive by provider name and exact
+by provider track ID. The catalog is globally public and contains no
+viewer-specific or private records; search applies its complete filters in the
+database before returning items. Missing songs use the common privacy-safe
+`404 NOT_FOUND`. A missing or retired provider mapping is omitted from
+`sources`; it does not make the metadata a playable asset.
+
+OpenAPI includes a response example using the approved Levitating metadata.
+For example, `GET /api/v1/songs?q=Levitating&genre=Pop&limit=20` returns an
+`items` array of song objects and `nextCursor`; detail uses the same song
+object. Invalid filters, cursor formats, or cursors from another filter set
+return `422 INVALID_CURSOR` for cursor errors or the standard `422
+VALIDATION_ERROR` envelope for query validation.
+
+The source is static approved metadata from Apple's iTunes Search API, with
+the artifact and no-refresh policy recorded in the
+[song catalog documentation](../data/SONG_CATALOG.md). No artwork files or artwork
+URLs are served, no provider calls occur at request time, and no playback
+provider or SDK is implied. Migrations leave the catalog empty; the guarded
+development import and F07 fixture are separate additive operations.
+
 ## Error behavior
 
 Implemented HTTP failures use this envelope:
