@@ -55,8 +55,8 @@ under `sources`, not as song IDs, and do not include a total count or private
 user data. See the [shared API contract](./api-contract.md) for wire details.
 Metadata, provider references, and artwork metadata are not audio. D-08
 playback/provider decisions remain unresolved; this catalog does not authorize
-or implement playback. The IDs are available as stable future playlist and
-queue references; those product APIs are outside this catalog slice.
+or implement playback. The IDs are used as stable playlist-entry references;
+queue APIs remain outside this catalog slice.
 
 Example response for `GET /api/v1/songs?q=Levitating&genre=Pop`:
 

@@ -8,8 +8,10 @@ preference, friendship and avatar contracts are implemented under `/api/v1` and
 documented in the [profile/friendship contract](./profile-and-friendship.md).
 The recipient-scoped in-app notification API is implemented under `/api/v1`
 and documented in the [notification contract](./notifications.md).
-Other product routes, DTOs, resource-specific rules, and WebSocket delivery
-guarantees are not approved merely because they appear here or in generated
+The collaborative playlist routes and their resource-specific WebSocket
+contract are implemented under `/api/v1` and documented in
+[`playlists.md`](./playlists.md). Other product routes, DTOs, and resource
+rules are not approved merely because they appear here or in generated
 OpenAPI. Preserve `GET /health`; it remains outside the `/api/v1` product
 namespace and retains its current readiness response.
 
@@ -163,9 +165,11 @@ operation IDs or proof of authorization.
 ## OpenAPI and approval boundary
 
 Generated OpenAPI publishes reusable response examples for the shared status
-mapping, implemented authentication routes, and the approved
-profile/friendship/avatar routes. Root-level `x-proposed-api-conventions` and
-`x-proposed-websocket-event-envelope` extensions remain proposals; they do not
-approve other product routes or schemas. Avatar storage and access are
-approved and documented in the profile/friendship contract; other product
-routes remain subject to review before client integration.
+mapping, implemented authentication routes, and approved profile/friendship,
+avatar and playlist routes. Playlist revision, idempotency, authorization and
+WebSocket behavior are specified in the [playlist contract](./playlists.md);
+they are implemented for playlists only and do not establish contracts for
+other product routes. Root-level `x-proposed-api-conventions` and
+`x-proposed-websocket-event-envelope` extensions remain proposals for those
+other routes. Avatar storage and access are approved and documented in the
+profile/friendship contract.

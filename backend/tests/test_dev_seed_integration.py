@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -5,9 +7,15 @@ from sqlalchemy.orm import Session
 
 from app.auth.models import Account, AuthChallenge
 from app.auth.security import hash_password, verify_password
+from app.catalog.importer import seed_demo_catalog
+from app.playlists.models import Playlist, PlaylistEntry
 from app.db.base import Base
 from app.db.session import get_db_engine
-from app.dev_seed import DEMO_ACCOUNTS, seed_demo_accounts
+from app.dev_seed import (
+    DEMO_ACCOUNTS,
+    seed_demo_accounts,
+    seed_demo_playlist,
+)
 from app.profiles.models import Profile
 
 
@@ -120,3 +128,53 @@ def test_seed_rolls_back_all_new_records_on_profile_conflict(seed_database) -> N
             .where(Account.email.in_([demo.email for demo in DEMO_ACCOUNTS]))
         ) == 0
         assert db.scalar(select(func.count()).select_from(Account)) == 1
+
+
+def test_demo_playlist_seed_is_additive_and_preserves_user_edits(seed_database) -> None:
+    with Session(seed_database) as db:
+        seed_demo_accounts(db)
+        seed_demo_catalog(db)
+    with Session(seed_database) as db:
+        first = seed_demo_playlist(db)
+        assert first.created is True
+        assert first.skipped is False
+    with Session(seed_database) as db:
+        playlist = db.scalar(select(Playlist))
+        assert playlist is not None
+        playlist_id = playlist.id
+        entry = db.scalar(
+            select(PlaylistEntry)
+            .where(PlaylistEntry.playlist_id == playlist_id)
+            .order_by(PlaylistEntry.position)
+        )
+        assert entry is not None
+        entry_id = entry.id
+        playlist.name = "User-edited demo playlist"
+        entry.position = 20
+        unrelated = Playlist(
+            owner_account_id=playlist.owner_account_id,
+            name="Unrelated user playlist",
+            description="Must remain untouched",
+            visibility="private",
+            edit_policy="owner",
+            creation_operation_id=uuid4(),
+            creation_fingerprint="0" * 64,
+        )
+        db.add(unrelated)
+        db.commit()
+        unrelated_id = unrelated.id
+    with Session(seed_database) as db:
+        second = seed_demo_playlist(db)
+        assert second.created is False
+        assert second.skipped is True
+    with Session(seed_database) as db:
+        playlist = db.get(Playlist, playlist_id)
+        entry = db.get(PlaylistEntry, entry_id)
+        unrelated = db.get(Playlist, unrelated_id)
+        assert playlist is not None
+        assert playlist.name == "User-edited demo playlist"
+        assert entry is not None
+        assert entry.position == 20
+        assert unrelated is not None
+        assert unrelated.name == "Unrelated user playlist"
+        assert db.scalar(select(func.count()).select_from(Playlist)) == 2

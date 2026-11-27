@@ -39,8 +39,19 @@ Existing catalog rows and their metadata are never overwritten. The full
 approved 40-record metadata artifact can be imported separately with
 `python -m app.catalog.importer`; this command uses the same local-development
 database guard and is additive. Neither command runs in migrations or
-production. The exact F07 playlist fixture IDs and provenance are documented
-in [the song catalog contract](../data/SONG_CATALOG.md).
+production. The stable catalog IDs are documented in [the song catalog
+contract](../data/SONG_CATALOG.md).
 
-F07/F08 may extend this same command with additive sample playlists and rooms.
-No playlist or room tables or records are created by the current seed command.
+The same command now creates one public `Cuevo Demo Mix`, owned by Alex Demo
+with Jamie Demo as an accepted collaborator. Its entries use only the three
+approved catalog IDs. The playlist, accepted invitation, entries and initial
+event use stable seed-owned IDs; a marker makes reruns skip an existing sample
+without resetting names, entry order or other user edits. A conflicting stable
+ID fails without deleting or overwriting anything.
+
+Playlists are seeded only after demo accounts and the approved three-song
+catalog fixture exist. This is the existing `python -m app.dev_seed` command,
+not a competing seed tool. It still fails closed outside development on a
+loopback `cuevo_dev` database. It is never invoked by application startup,
+production, or migrations. See the [playlist API contract](./playlists.md) for
+the fixture's permissions and resource behavior. No room records are seeded.

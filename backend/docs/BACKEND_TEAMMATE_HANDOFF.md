@@ -230,16 +230,33 @@ access policies are approved; no local `file://` avatar URL is valid.
 
 ## 8. Playlists and collaborative editing
 
-Required behavior:
+The F07 backend implementation follows the approved decisions recorded in
+`implementation-plan.md` D-05/D-07:
 
-- Create/read/update/list/search playlists; define deletion/archive and removal effects.
-- Subject default: **public and everyone can edit**. Current create UI sets `private: true`: this is a known mismatch to fix during client integration, not a reason to copy the wrong default into the API.
-- Separate discover/read permission from edit permission. Support public/private visibility and everyone/invited editing. Current UI additionally exposes owner-only editing.
-- Owner controls metadata, visibility, edit policy and invitations; editable entries follow the effective edit policy.
-- Only authorized invitees/owner see private playlist data. Mock Home deliberately contains private fixtures; this does not authorize production disclosure.
-- Add/remove/reorder entries atomically using stable entry IDs and revisions. UI currently prevents duplicate songs; proposed initial policy is one occurrence of a song per playlist, pending confirmation.
-- Invite users, accept/decline/revoke, persist collaborators, and notify affected users. Define whether private invitations immediately grant visibility or require acceptance.
-- Resolve stale edits explicitly; no last-write-wins replacement of an entire playlist without conflict protection. Reconnecting users fetch authoritative state.
+- New playlists are public and everyone-editable by default. The mobile create
+  screen's current private default is a known integration mismatch; correct
+  the client later rather than changing the server default.
+- Owner-only editing is a supported extra policy. Invited-only editing is
+  owner-selected and requires an active `playlist_invited_edit` license. Private
+  playlist visibility begins only after an invitation is accepted.
+- Duplicate occurrences are rejected. Names are trimmed to 1–100 characters;
+  descriptions are trimmed to 0–1000 characters. Playlists are hard-deleted;
+  entries/invitations cascade and a deletion receipt supports safe retries.
+- The backend implements authorized CRUD/search, invitation send/respond/
+  revoke, stable entry IDs and authorship, atomic add/remove/reorder, revisioned
+  snapshots, idempotency, privacy-safe list filtering, F06 notifications and
+  post-commit WebSocket invalidations. Stale revisions return 409; clients
+  fetch an authorized snapshot to recover. Full-playlist last-write-wins
+  replacement is not supported.
+- Event delivery is ordered per playlist within one API process. WebSocket
+  subscribers authenticate with the bearer header and are reauthorized after
+  each event; private-access revocation closes the subscription. Revision gaps
+  require an authorized snapshot fetch. Multi-process deployments still need a
+  shared event broker before claiming cross-process fan-out.
+
+See the complete route/error/event contract in
+[`playlists.md`](playlists.md). The API does not expose private mobile mock
+fixtures or viewer-specific permissions in shared events.
 
 Proposed transport:
 
@@ -347,9 +364,23 @@ Proposed envelope:
 }
 ```
 
-Freeze actual event names and payload schemas for playlist edits, membership/invitation changes, queue/vote changes, playback transitions, room end, notifications and entitlement changes. Document whether payload is a snapshot, patch or invalidation. Authenticate connections, authorize subscriptions and recheck access after permission changes. Avoid bearer tokens in logged URLs.
+F07 freezes playlist event types (`playlist.created`, `playlist.updated`,
+`playlist.invitation.updated`, `playlist.deleted`) and the invalidation-only
+payload in [`playlists.md`](playlists.md). Connections use an Authorization
+bearer header, subscriptions are checked before connect and on every event,
+and permission revocation closes the subscription. Playlist events are
+committed before broadcast and ordered by per-playlist revision within one API
+process. The current process-local broadcaster does not replay a cursor; a
+revision gap sends `playlist.resync_required`, after which the client fetches
+the latest authorized snapshot. Slow queues are bounded and clients are
+disconnected on overflow.
 
-Broadcast after commit. Define ordering per resource, deduplication, reconnect/backoff, heartbeats, token expiry, authorization revocation, cursor retention and resync. On a missing revision or expired cursor, the client fetches a full authorized snapshot. Viewer-specific fields such as `myVote` and capabilities require per-viewer delivery or a separate authorized fetch; never broadcast one user's private state to everyone. Bound slow-client queues and websocket connection/message sizes.
+Queue/vote changes, playback transitions, room end, native notifications and
+other entitlement events still need their own reviewed event names and
+payloads. Viewer-specific fields such as `myVote` and capabilities must never
+be broadcast as shared state. Multi-process deployments require a shared event
+broker before claiming cross-process playlist fan-out. Browser origin/session
+and cookie behavior remain outside this native bearer contract.
 
 ## 12. Bonuses: backend readiness without overstating completion
 

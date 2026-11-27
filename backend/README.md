@@ -104,24 +104,29 @@ Authenticated profile/privacy, avatar, music-preference, friendship and
 relationship routes are implemented and documented in the
 [profile/friendship contract](docs/profile-and-friendship.md). Avatars use
 durable PostgreSQL storage, validated JPEG/PNG/WebP bytes, a 2 MiB cap, and
-profile-privacy-gated reads. Other product routes and
-shared proposals for pagination, revisions, viewer permissions and WebSocket
-delivery still require review. See the [API contract](docs/api-contract.md)
-for the shared envelope and remaining approval boundaries.
+profile-privacy-gated reads. Other product routes and shared proposals for
+pagination, revisions, viewer permissions and WebSocket delivery still require
+review except for the implemented playlist contract.
+See the [API contract](docs/api-contract.md) for the shared envelope and
+remaining approval boundaries. The [playlist and realtime contract](docs/playlists.md)
+documents CRUD/search, policy and invitation authorization, revisioned
+operations, idempotency, WebSocket events and snapshot resynchronization.
 Authenticated in-app notifications provide recipient-scoped durable unread/read
-state and typed resource references. The API does not send OS push notifications,
-register native device tokens, or implement resource-specific notification
-producers; see the [notification contract](docs/notifications.md).
+state and typed resource references. F07 produces notifications for playlist
+invitation changes. The API does not send OS push notifications or register
+native device tokens; see the [notification contract](docs/notifications.md).
 
 The public song catalog is available at `GET /api/v1/songs` and
 `GET /api/v1/songs/{songId}`. Its source is the approved, static metadata
 artifact at `backend/data/songs.json`; it is not refreshed automatically.
 Migrations create an empty catalog. The explicit `python -m
 app.catalog.importer` command imports the approved records into a guarded local
-development database only. `python -m app.dev_seed` adds the deterministic
-three-song F07 fixture alongside the demo accounts. Neither command runs in
-production or from a migration. See [song catalog provenance and API
-contract](data/SONG_CATALOG.md). Provider IDs are metadata references, not
+development database only. `python -m app.dev_seed` adds the persistent demo
+accounts, deterministic three-song F07 fixture, and one public collaborative
+playlist. It is additive/idempotent and skips existing or user-modified demo
+resources. Neither command runs in production or from a migration. See [song
+catalog provenance and API contract](data/SONG_CATALOG.md) and [development
+demo data](docs/development-demo.md). Provider IDs are metadata references, not
 internal song IDs or playable media; artwork URLs and image files are not
 served, and no playback SDK is included.
 

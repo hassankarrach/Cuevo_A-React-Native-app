@@ -53,7 +53,8 @@ views. The response shape is `{ "items": [], "nextCursor": null }`.
 gracefully handle unknown future kinds. Initial planned kinds include
 `friend_request`, `friend_accepted`, `room_invitation`,
 `playlist_invitation`, `playlist_updated`, and `room_activity`. Producers for
-these resource events are not included in this API slice.
+friendship and room events are implemented with those resource features.
+Playlist invitation and invitation-state producers are implemented with F07.
 
 Actor summaries include only the account ID, display name and username that
 the current profile contract makes visible to profile viewers. They exclude
@@ -63,13 +64,13 @@ or profile is gone, `actor` is `null`.
 Destinations contain only a typed opaque reference, never a resource title,
 message, invitation payload, or permission. Supported types are `profile`,
 `playlist`, and `room`. A deleted profile destination is returned as `null`.
-Playlist and room resource models do not yet exist; their future producers
-must provide a reference only after domain authorization has established it is
-appropriate for this recipient. Every resource endpoint/navigation action must
-recheck current authorization; possessing a notification or reference grants
-no access. Missing or inaccessible resources must retain their resource
-feature's privacy-safe behavior. Until those resource features land, their
-availability/access filtering cannot be performed by the notification API.
+Playlist resources now exist; F07 creates invitation notifications only after
+the owner-authorized operation commits its domain changes. Room resource
+models/producers are not implemented. Every resource endpoint/navigation
+action must recheck current authorization; possessing a notification or
+reference grants no access. Missing or inaccessible resources must retain
+their resource feature's privacy-safe behavior. Destination visibility is not
+rechecked by the notification read API.
 
 Unread count:
 

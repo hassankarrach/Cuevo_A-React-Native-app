@@ -15,6 +15,8 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.profiles import router as profiles_router
 from app.notifications.routes import router as notifications_router
 from app.catalog.routes import router as catalog_router
+from app.playlists.routes import router as playlists_router
+from app.playlists.realtime import PlaylistEventHub
 from app.auth.email import EmailDelivery, SMTPEmailDelivery
 from app.auth.google import VerifiedGoogleIdentity, verify_google_id_token
 from app.core.config import Settings, get_settings
@@ -36,6 +38,7 @@ def create_app(
         version="0.1.0",
     )
     app.state.settings = config
+    app.state.playlist_event_hub = PlaylistEventHub()
     app.state.email_delivery = email_delivery or SMTPEmailDelivery(config)
     app.state.google_token_verifier = google_token_verifier or verify_google_id_token
 
@@ -69,6 +72,7 @@ def create_app(
     app.include_router(profiles_router)
     app.include_router(notifications_router)
     app.include_router(catalog_router)
+    app.include_router(playlists_router)
     return app
 
 
