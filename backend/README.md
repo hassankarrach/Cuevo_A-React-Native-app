@@ -104,17 +104,19 @@ Authenticated profile/privacy, avatar, music-preference, friendship and
 relationship routes are implemented and documented in the
 [profile/friendship contract](docs/profile-and-friendship.md). Avatars use
 durable PostgreSQL storage, validated JPEG/PNG/WebP bytes, a 2 MiB cap, and
-profile-privacy-gated reads. Other product routes and shared proposals for
-pagination, revisions, viewer permissions and WebSocket delivery still require
-review except for the implemented playlist contract.
+profile-privacy-gated reads. Room lifecycle, public/private discovery,
+membership, host-managed invitations, protected six-character join codes and
+revisioned WebSocket invalidations are implemented in the
+[room contract](docs/rooms.md); vote eligibility remains separate from
+visibility, with licensed/location-time policies not yet enabled.
 See the [API contract](docs/api-contract.md) for the shared envelope and
 remaining approval boundaries. The [playlist and realtime contract](docs/playlists.md)
 documents CRUD/search, policy and invitation authorization, revisioned
 operations, idempotency, WebSocket events and snapshot resynchronization.
 Authenticated in-app notifications provide recipient-scoped durable unread/read
-state and typed resource references. F07 produces notifications for playlist
-invitation changes. The API does not send OS push notifications or register
-native device tokens; see the [notification contract](docs/notifications.md).
+state and typed resource references. F07 and F08 produce notifications for
+playlist/room invitation changes. The API does not send OS push notifications
+or register native device tokens; see the [notification contract](docs/notifications.md).
 
 The public song catalog is available at `GET /api/v1/songs` and
 `GET /api/v1/songs/{songId}`. Its source is the approved, static metadata
@@ -122,9 +124,10 @@ artifact at `backend/data/songs.json`; it is not refreshed automatically.
 Migrations create an empty catalog. The explicit `python -m
 app.catalog.importer` command imports the approved records into a guarded local
 development database only. `python -m app.dev_seed` adds the persistent demo
-accounts, deterministic three-song F07 fixture, and one public collaborative
-playlist. It is additive/idempotent and skips existing or user-modified demo
-resources. Neither command runs in production or from a migration. See [song
+accounts, deterministic three-song F07 fixture, one collaborative playlist,
+and representative public/private rooms. It is additive/idempotent and skips
+existing or user-modified demo resources. Neither command runs in production
+or from a migration. See [song
 catalog provenance and API contract](data/SONG_CATALOG.md) and [development
 demo data](docs/development-demo.md). Provider IDs are metadata references, not
 internal song IDs or playable media; artwork URLs and image files are not
@@ -207,7 +210,9 @@ database. To apply the migrations to the isolated test database, set
 `ENVIRONMENT=test alembic upgrade head`. `0006_song_catalog` adds empty song,
 genre, and provider-record tables; it does not seed metadata.
 `0007_notifications` adds durable recipient-scoped notification records and
-idempotency keys; it creates no sample notifications.
+idempotency keys; it creates no sample notifications. `0008_playlists` adds
+collaborative playlists and `0009_rooms` adds rooms, memberships, invitations,
+join-code digests and revisioned room events. Migrations never seed demo data.
 
 ## Tests
 
@@ -228,7 +233,9 @@ See the [auth lifecycle guide](docs/auth-lifecycle.md) for local Mailpit,
 migration, request examples, and rate-limit policy. See
 [profile/friendship contract](docs/profile-and-friendship.md) for profile
 limits/privacy, friendship transitions, and disposable integration-test
-accounts. See [local demo accounts](docs/development-demo.md) for persistent,
+accounts. See the [room lifecycle/access contract](docs/rooms.md) for
+visibility, invitations, Join, code and realtime behavior. See [local demo
+accounts](docs/development-demo.md) for persistent,
 guarded development-only seed instructions and credentials. See
 [foundation verification](docs/foundation-verification.md) for database
 isolation and environment verification. The moved

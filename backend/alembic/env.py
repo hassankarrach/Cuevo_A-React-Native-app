@@ -9,6 +9,7 @@ import app.catalog.models
 import app.profiles.models
 import app.notifications.models
 import app.playlists.models
+import app.rooms.models
 from app.db.base import Base
 
 

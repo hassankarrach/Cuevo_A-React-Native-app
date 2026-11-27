@@ -65,12 +65,13 @@ Destinations contain only a typed opaque reference, never a resource title,
 message, invitation payload, or permission. Supported types are `profile`,
 `playlist`, and `room`. A deleted profile destination is returned as `null`.
 Playlist resources now exist; F07 creates invitation notifications only after
-the owner-authorized operation commits its domain changes. Room resource
-models/producers are not implemented. Every resource endpoint/navigation
-action must recheck current authorization; possessing a notification or
-reference grants no access. Missing or inaccessible resources must retain
-their resource feature's privacy-safe behavior. Destination visibility is not
-rechecked by the notification read API.
+the owner-authorized operation commits its domain changes. Room resources now
+exist; F08 creates notifications transactionally for invitation
+send/respond/revoke changes. Every resource endpoint/navigation action must
+recheck current authorization; possessing a notification or reference grants
+no access. Missing or inaccessible resources must retain their resource
+feature's privacy-safe behavior. Destination visibility is not rechecked by
+the notification read API.
 
 Unread count:
 

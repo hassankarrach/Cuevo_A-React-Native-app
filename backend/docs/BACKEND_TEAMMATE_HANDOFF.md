@@ -280,11 +280,27 @@ An adapter can derive ordered UI `songIds` from entries. Metadata editor current
 
 ## 9. Rooms, access, queue voting and playback
 
-Required room fields/capabilities: name, genre, host, visibility, lifecycle, participants/count, current viewer role, current playback summary, join/leave, invitations and join codes. Current room options expose only visibility and genre; **location/time voting policy UI is unfinished**. Add the backend policy model now with coordinated client work later.
+The [room lifecycle/access contract](rooms.md) is implemented. Its fields are
+name, description, host, visibility, lifecycle, participants/count, viewer
+role/capabilities, join/leave, invitations and join codes. Genre and playback
+summary are not part of the current room API. Location/time voting remains
+unavailable.
 
-Subject defaults: public events are discoverable; everyone can vote under the default policy. Private events are discoverable/accessed only by invited users. Current mock queue rejects `visitor` actions, so clarify implicit membership versus explicit Join before client integration; do not accidentally impose an invitation requirement on default public voting.
+Approved room behavior: public active rooms are discoverable and readable and
+votable by any authenticated account without Join; Join is optional and only
+adds a participant. Private room read access is limited to accepted invitees
+and the host. An accepted invite grants read access but not roster membership.
+The host alone invites/revokes, and only the host ends a room; ended is
+terminal. Public participant summaries are visible to public viewers, while
+private summaries require room access. Visibility and vote eligibility are
+separate; public/everyone is the default.
 
-**Proposed voting policy model:** `everyone | invited | location-time`, independent of room visibility. Location/time policy needs latitude/longitude, radius, start/end timestamps, timezone interpretation, acceptable location age/accuracy, denied-permission behavior and the entitlement/license that permits selecting that policy. Radius and timing values are open. Do not use profile city text or BLE proximity as trusted GPS evidence. Document limits of client-reported location.
+The room policy model represents `everyone | invitees`; selecting invitees
+requires a room-policy license, which is not yet implemented. The policy is
+therefore not selectable through the current API. Location/time rules,
+latitude/longitude, radius, time window, timezone, evidence age/accuracy,
+denied-permission behavior, and licensing remain unresolved under D-06. Do not
+use profile city text or BLE proximity as trusted GPS evidence.
 
 Queue behavior visible today:
 
@@ -316,7 +332,15 @@ Server validates host-only playback commands, applies an expected playback revis
 
 Open playback decisions: music provider/SDK, catalog-to-playable-ID mapping, provider account/subscription restrictions, host background/disconnect behavior, host transfer, recovery from playback failures, stale completion events and room end/restart semantics. Prototype provider playback on a real phone before claiming the feature works. Do not add synchronized participant audio.
 
-Join-code UI takes six characters and normalizes case. Freeze alphabet, randomness, uniqueness, expiry/rotation, attempt throttling and whether a private-room code is an invitation credential. Never use fixture `AAAAAA` as production logic. Unauthorized search, code errors, participant/activity feeds and websocket subscriptions must not leak private-room details.
+The six-character code contract is resolved in [rooms.md](rooms.md):
+`23456789ABCDEFGHJKLMNPQRSTUVWXYZ`, cryptographically random, HMAC-digested
+at rest, 24-hour expiry, host rotation/revocation, and five failed attempts per
+account and IP per 15 minutes. A code is not an invitation credential. Accepted
+private invitees can read without a code; code redemption is an explicit extra
+check for joining, and a non-invitee receives the same generic 404 as an
+invalid/expired/revoked code. Repeated redemption while active is idempotent.
+Unauthorized search, counts, activity and websocket subscriptions must not
+leak private-room details.
 
 ## 10. Endpoint capability checklist
 
@@ -430,9 +454,9 @@ Existing scope, host-only audio and deferred fetch integration do not need reope
 | Avatar upload | Deferred pending approved durable object-storage and URL/access contract | Provide image-picker payload capabilities and review failure UX when resumed |
 | Verified badge | No badge until a distinct verified-account status exists | Define that status before exposing a badge |
 | Default permissions | Public/everyone defaults and capability response | Fix current private playlist default and unfinished policy UI later |
-| Voting | Atomic vote/ranking/cutoff contract | Confirm downvotes, duplicate/re-suggest and public Join behavior |
-| Invitations/codes | Lifecycle, access grants, alphabet/expiry/revocation | UI review for invite acceptance and six-character input |
-| Location/time | Policy shape and verification limitations | Radius/time rules, consent/denial UX and required native location support |
+| Voting | F09 owns atomic vote/ranking/cutoff; room visibility is separate from eligibility | Confirm downvotes, duplicate/re-suggest; public visitors can read/vote without Join |
+| Invitations/codes | F08 contract in [rooms.md](./rooms.md): host-only invite/revoke, accepted invite read access, code does not grant private access, 32-symbol alphabet, six characters, 24-hour expiry, rotation/revocation and account/IP throttling | Review invite acceptance and six-character UI integration; a code is required only on explicit redemption |
+| Location/time | Deferred: no policy/evidence field is trusted until D-06 and client evidence limitations are approved | Radius/time rules, consent/denial UX and required native location support |
 | Playback provider | Catalog/provider identity adapter and state protocol | Real-phone SDK feasibility; jointly select provider and account requirements |
 | Host unavailable | Proposed pause/timeout/transfer/end policy | Product approval and recovery UX |
 | Realtime | Event schemas, ordering, replay/resync and token handling | Subscription lifecycle and conflict UI |

@@ -9,12 +9,14 @@ from app.auth.models import Account, AuthChallenge
 from app.auth.security import hash_password, verify_password
 from app.catalog.importer import seed_demo_catalog
 from app.playlists.models import Playlist, PlaylistEntry
+from app.rooms.models import Room, RoomInvitation, RoomMembership
 from app.db.base import Base
 from app.db.session import get_db_engine
 from app.dev_seed import (
     DEMO_ACCOUNTS,
     seed_demo_accounts,
     seed_demo_playlist,
+    seed_demo_rooms,
 )
 from app.profiles.models import Profile
 
@@ -178,3 +180,45 @@ def test_demo_playlist_seed_is_additive_and_preserves_user_edits(seed_database) 
         assert unrelated is not None
         assert unrelated.name == "Unrelated user playlist"
         assert db.scalar(select(func.count()).select_from(Playlist)) == 2
+
+
+def test_demo_room_seed_is_additive_and_preserves_user_edits(seed_database) -> None:
+    with Session(seed_database) as db:
+        seed_demo_accounts(db)
+        first = seed_demo_rooms(db)
+        assert first.created == 2
+        assert first.skipped == 0
+
+    with Session(seed_database) as db:
+        public = db.scalar(select(Room).where(Room.visibility == "public"))
+        private = db.scalar(select(Room).where(Room.visibility == "private"))
+        assert public is not None
+        assert private is not None
+        public_id, private_id = public.id, private.id
+        public.name = "User-edited demo room"
+        private.visibility = "public"
+        db.commit()
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(RoomInvitation)
+                .where(RoomInvitation.room_id == private_id)
+            )
+            == 1
+        )
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(RoomMembership)
+                .where(RoomMembership.room_id == public_id)
+            )
+            == 1
+        )
+
+    with Session(seed_database) as db:
+        second = seed_demo_rooms(db)
+        assert second.created == 0
+        assert second.skipped == 2
+        assert db.get(Room, public_id).name == "User-edited demo room"
+        assert db.get(Room, private_id).visibility == "public"
+        assert db.scalar(select(func.count()).select_from(Room)) == 2

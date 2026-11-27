@@ -54,4 +54,14 @@ catalog fixture exist. This is the existing `python -m app.dev_seed` command,
 not a competing seed tool. It still fails closed outside development on a
 loopback `cuevo_dev` database. It is never invoked by application startup,
 production, or migrations. See the [playlist API contract](./playlists.md) for
-the fixture's permissions and resource behavior. No room records are seeded.
+the fixture's permissions and resource behavior.
+
+The same command creates at most one public room hosted by Alex Demo and one
+private room hosted by Jamie Demo with Alex as an accepted invitee. Each room,
+host membership, invitation and initial event uses stable seed-owned IDs; each
+room has a stable marker. Reruns skip a room found by either marker or ID,
+preserving user edits and all existing resources. A conflicting ID fails the
+transaction instead of overwriting anything. The private fixture follows the
+same accepted-invitation access rules as other private rooms; it is not exposed
+to unrelated accounts. No join-code secret is seeded. See the [room lifecycle
+and access contract](./rooms.md).

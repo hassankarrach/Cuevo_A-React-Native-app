@@ -4,7 +4,7 @@ Cuevo combines **cue/queue + vote**: people choose what plays next and build pla
 
 A React Native music app with live track voting and collaborative playlist editing.
 
-This two-person project is in the mobile UI and backend implementation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend implements email/password account lifecycle, PostgreSQL session state, profile/friendship APIs, durable in-app notification state, a public metadata catalog/search contract, and the collaborative playlist editor with revisioned HTTP mutations and WebSocket invalidations. Mobile API wiring, OS push delivery, audio playback and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
+This two-person project is in the mobile UI and backend implementation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend implements email/password account lifecycle, PostgreSQL session state, profile/friendship APIs, durable in-app notifications, a public metadata catalog/search contract, the collaborative playlist editor, and room lifecycle/access with revisioned WebSocket invalidations. Mobile API wiring, track voting, OS push delivery, audio playback and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
 
 ## Development
 
@@ -41,6 +41,7 @@ Mac setup is complete; the current UI has been previewed in Expo Go on the iPhon
 - [Profile and friendship backend contract](backend/docs/profile-and-friendship.md)
 - [In-app notification API contract](backend/docs/notifications.md)
 - [Playlist and realtime API contract](backend/docs/playlists.md)
+- [Room lifecycle and access contract](backend/docs/rooms.md)
 - [Project plan and requirements](doc/PROJECT_PLAN.md)
 - [Team responsibilities](doc/TEAM_RESPONSIBILITIES.md)
 - [Cuevo backend setup and migrations](backend/README.md)
@@ -70,13 +71,21 @@ The shared HTTP/error contract is documented in the
 [backend API contract](backend/docs/api-contract.md); playlist routes and
 revisioned WebSocket invalidations are implemented and documented in the
 [playlist contract](backend/docs/playlists.md), but are not wired to mobile.
+Room lifecycle, public/private discovery, Join/leave, invitations, protected
+join codes and authorization-aware realtime are implemented and documented in
+the [room contract](backend/docs/rooms.md), also not wired to mobile. Room
+visibility is separate from vote eligibility; licensed invitee-only voting and
+location/time policies remain unavailable pending their policy/evidence gates.
 The current mobile playlist create screen defaults to private and must be
 corrected to public/everyone when client integration resumes. The song catalog
 routes are implemented and documented separately.
 The authenticated in-app notification API provides durable unread/read state
 and typed resource references; playlist invitation producers are wired, while
 other resource producers and mobile wiring remain pending. Native notification
-permission and server push registration or delivery are not implemented.
+permission and server push registration or delivery are not implemented. The
+development-only seed command now includes representative public/private rooms
+hosted by the persistent demo accounts; its behavior is documented in
+[development demo data](backend/docs/development-demo.md).
 
 ## Checks
 
