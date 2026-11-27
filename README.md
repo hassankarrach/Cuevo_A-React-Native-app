@@ -4,7 +4,7 @@ Cuevo combines **cue/queue + vote**: people choose what plays next and build pla
 
 A React Native music app with live track voting and collaborative playlist editing.
 
-This two-person project is in the mobile UI and backend foundation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend now implements email/password account lifecycle and PostgreSQL session state, but mobile API wiring, profile/friendship data ownership, audio playback, realtime collaboration and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
+This two-person project is in the mobile UI and backend implementation stage. Illustrated welcome/introduction, account recovery and verification UI, Home, grouped universal search, dedicated song details, room discovery/search/filtering, local creation/join flows, queue voting/lifecycle, profiles, notifications, playlist editing, Settings and Help are built. Private-room/invitation and location/time voting-policy UI remain unfinished. The backend implements email/password account lifecycle, PostgreSQL session state, and profile/friendship APIs; mobile API wiring, audio playback, realtime collaboration and production email delivery are not implemented. Plus offer/payment/review UI and session-only saved-card summaries are available; no real payment is processed. See [UI progress](doc/UI_PROGRESS.md) for the current inventory.
 
 ## Development
 
@@ -34,6 +34,7 @@ Mac setup is complete; the current UI has been previewed in Expo Go on the iPhon
 - [Local setup and Mac handoff](doc/LOCAL_DEVELOPMENT.md)
 - [Current session handoff and next steps](doc/SESSION_HANDOFF.md)
 - [Google Sign-In frontend handoff](FRONTEND_TEAMMATE_HANDOFF.md)
+- [Profile and friendship backend contract](backend/docs/profile-and-friendship.md)
 - [Project plan and requirements](doc/PROJECT_PLAN.md)
 - [Team responsibilities](doc/TEAM_RESPONSIBILITIES.md)
 - [Cuevo backend setup and migrations](backend/README.md)
@@ -46,7 +47,9 @@ Follow the [backend setup and verification guide](backend/README.md) before
 making backend or database changes. The email/password account lifecycle and
 its account/session migration are documented in the
 [auth lifecycle guide](backend/docs/auth-lifecycle.md); this does not wire
-mobile credentials or implement profile/friendship ownership. Google native
+mobile credentials. Profile and friendship backend behavior is documented in
+the [profile/friendship contract](backend/docs/profile-and-friendship.md);
+avatars use durable PostgreSQL storage with privacy-filtered access. Google native
 ID-token verification and explicit account linking are implemented in the
 backend and documented in the [auth lifecycle guide](backend/docs/auth-lifecycle.md).
 The current checkout contains no iOS project or mobile source, so native SDK

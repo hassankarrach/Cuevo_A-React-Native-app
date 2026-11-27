@@ -41,7 +41,7 @@ Profile integration and ownership
 
 The profile setup already collects a display name and photo. Our shared profile model also includes username, bio, location and preferred genres.
 
-Please coordinate the user/profile relationship, identifier format and photo-upload contract with us. Under our existing responsibility split, the frontend developer contributes the profiles and friendships backend feature, with your review. Please establish the authentication/database conventions that feature should reuse rather than independently duplicating it.
+Ownership update (2026-11-26): the backend teammate implements the profiles and friendships backend feature and authors/owns its migration; the frontend developer owns client integration. Reuse the established account identifiers and authentication/database conventions rather than independently duplicating them. Avatar upload remains deferred until a durable storage and URL contract is approved.
 
 What we need back from Phase 1
 

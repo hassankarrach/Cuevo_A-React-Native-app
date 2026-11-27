@@ -96,6 +96,8 @@ def test_http_exception_statuses_map_to_stable_codes_without_details() -> None:
         403: "FORBIDDEN",
         404: "NOT_FOUND",
         409: "REVISION_CONFLICT",
+        413: "PAYLOAD_TOO_LARGE",
+        415: "UNSUPPORTED_MEDIA_TYPE",
         429: "RATE_LIMITED",
         503: "SERVICE_UNAVAILABLE",
     }

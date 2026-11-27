@@ -225,12 +225,39 @@ consumed, and exhausted challenges cannot be used. The public codes are
 consumes the challenge.
 
 `POST /api/v1/auth/email/resend` accepts `{"email":"demo@cuevo.test"}` and
-returns a generic `202 Accepted` response whether or not an eligible account
-exists. A `429 RATE_LIMITED` response includes `Retry-After` during cooldown or
-when the resend rate is exceeded. A successful resend replaces the old
-challenge; the email includes the new challenge ID and expiry timestamp.
-Delivery runs in a background task; failures are logged without message
-contents, and callers can retry after the resend window.
+returns the same generic `202 Accepted` shape and message whether or not an
+eligible account exists:
+
+```json
+{
+  "accepted": true,
+  "message": "If the account can receive a verification email, instructions will be sent.",
+  "challengeId": "a0b1c2d3-e4f5-4678-9012-3456789abcde",
+  "expiresAt": "2026-11-25T15:40:00Z",
+  "resendAvailableAt": "2026-11-25T15:25:30Z"
+}
+```
+
+For an eligible unverified account, these are the newly persisted replacement
+challenge's actual values, and the message is delivered asynchronously. For an
+unknown or already-verified address, the response contains an unpersisted,
+random challenge ID and equivalent relative timestamps. It contains no account
+object, masked email, or account-existence flag; the generated ID cannot be
+verified and no email is sent. Verification still requires the matching real
+email code and challenge ID.
+
+A `429 RATE_LIMITED` response includes `Retry-After` seconds during cooldown or
+when the resend rate is exceeded. A successful resend invalidates the previous
+challenge; the email and response contain the replacement challenge ID and
+expiry. Delivery runs in a background task; failures are logged without
+message contents, and callers can retry after the resend window.
+
+For restart recovery, persist the pending email, `challengeId`, `expiresAt`,
+and `resendAvailableAt` on the client, but never persist the verification
+code. After a restart, continue verification using the saved email and
+challenge ID if the challenge has not expired. If pending state is missing or
+expired, ask for the email again and call resend; honor `Retry-After`. There is
+no email-based verification-status endpoint.
 
 ### Login, current account, renewal, and logout
 
@@ -257,9 +284,13 @@ It returns an opaque access token and a refresh token:
 
 Send the access token as `Authorization: Bearer <accessToken>`.
 `GET /api/v1/me` returns the current account and its separate verification and
-profile-completion state. `POST /api/v1/me/onboarding/profile-completed` marks
-onboarding profile setup complete after email verification; it does not create
-or own profile data.
+profile-completion state. Profile completion is explicit: after email
+verification, save the required profile `displayName` and `username` through
+`PATCH /api/v1/me/profile`, then call
+`POST /api/v1/me/onboarding/profile-completed`. The completion route rejects
+an absent profile or missing required fields with `422 VALIDATION_ERROR`; it
+does not create profile data. It is idempotent and returns the updated account
+state. See the [profile setup sequence](./profile-and-friendship.md#profile-and-onboarding-sequence).
 
 `POST /api/v1/auth/refresh` accepts `{"refreshToken":"<current-token>"}` and
 returns a new access/refresh pair. Each refresh token is one-use. Replaying a
@@ -333,7 +364,7 @@ Rate-limit buckets are stored in PostgreSQL so they apply across API workers.
 Subjects are keyed digests, not stored email addresses or tokens. The API uses
 the direct client peer address; it does not trust forwarded-IP headers.
 
-| Operation | Limit |
+| Operation | Production/default limit |
 |---|---|
 | Registration | 5 per peer IP per hour |
 | Login | 5 per normalized email and 10 per peer IP per 15 minutes |
@@ -343,8 +374,27 @@ the direct client peer address; it does not trust forwarded-IP headers.
 | Reset request | 1 per email per 30 seconds; 3 per email and 10 per peer IP per hour |
 | Reset confirmation | 5 failed attempts per challenge; 5 per email and 10 per peer IP per hour |
 | Password change | 5 per account and 10 per peer IP per 15 minutes |
+| Google sign-in/link/unlink | 20 per peer IP for sign-in; 5 per account and 10 per peer IP for link/unlink per 15 minutes |
 
-## Local email and repeatable demo
+Development and test environments may override the per-window request maxima
+using `AUTH_RATE_LIMIT_*` settings. Each value must be an integer from 1 to
+1000; windows and the separate five-failed-attempt challenge cap are fixed.
+The [safe local examples](../.env.example) raise request ceilings for
+simulator/test traffic. Production rejects non-default authentication rate
+limits and still refuses startup until a production email delivery adapter is
+approved. Production deployment is not ready.
+
+The setting suffixes correspond to the operation and subject in the table;
+for example, `AUTH_RATE_LIMIT_LOGIN_EMAIL_15M` controls the per-email login
+maximum. PostgreSQL-backed buckets, keyed subject digests, direct peer-IP
+identification, and `Retry-After` calculation are unchanged.
+
+## Local email and disposable auth demo
+
+For persistent local demo accounts that do not send verification email, use
+the [guarded development seed command](./development-demo.md). The following
+steps instead demonstrate registration and email verification through local
+Mailpit.
 
 1. In `backend/`, copy `.env.example` to the ignored `.env`. Replace
    `AUTH_SECRET_KEY` with a locally generated value:
@@ -385,5 +435,7 @@ the direct client peer address; it does not trust forwarded-IP headers.
 
 The application intentionally refuses `ENVIRONMENT=production` until a
 production email delivery adapter is separately approved and configured.
-Social-provider verification, profile/friendship data ownership, and mobile
-credential storage remain out of scope.
+Social-provider verification is implemented in this backend. Profile and
+friendship behavior is documented in the
+[profile/friendship contract](./profile-and-friendship.md); mobile credential
+storage remains a client responsibility.

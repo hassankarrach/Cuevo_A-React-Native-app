@@ -100,7 +100,11 @@ verification, sign-in and explicit account link/unlink are implemented under
 `/api/v1`; configure the optional public Google client IDs in `.env` to enable
 them. The current checkout contains no iOS project or mobile source, so
 native SDK integration remains a client-side task. Facebook is not supported.
-Other product routes and
+Authenticated profile/privacy, avatar, music-preference, friendship and
+relationship routes are implemented and documented in the
+[profile/friendship contract](docs/profile-and-friendship.md). Avatars use
+durable PostgreSQL storage, validated JPEG/PNG/WebP bytes, a 2 MiB cap, and
+profile-privacy-gated reads. Other product routes and
 shared proposals for pagination, revisions, viewer permissions and WebSocket
 delivery still require review. See the [API contract](docs/api-contract.md)
 for the shared envelope and remaining approval boundaries.
@@ -118,6 +122,7 @@ for the shared envelope and remaining approval boundaries.
 | `EMAIL_FROM_ADDRESS` | No | Local message sender; defaults to `no-reply@cuevo.local` |
 | `GOOGLE_IOS_CLIENT_ID` | No | Public iOS OAuth client ID used to validate Google `azp` when present |
 | `GOOGLE_SERVER_CLIENT_ID` | No | Public server OAuth client ID used as the Google ID-token audience |
+| `AUTH_RATE_LIMIT_*` | No | Development/test-only per-window request maxima (1–1000); defaults match the production policy |
 
 Example values in `.env.example` contain development-only placeholder
 credentials. The application fails startup configuration if `DATABASE_URL` is
@@ -171,7 +176,12 @@ alembic downgrade -1
 The initial `0001_initial` migration establishes migration metadata only;
 `0002_account_auth` adds the email/password account/authentication tables and
 `0003_google_identity` adds provider identity mappings and allows passwordless
-Google accounts. To apply the migrations to the isolated test database, set
+Google accounts. `0004_profiles_friendships` adds profile data and the
+deterministic friendship-request model without duplicating F02 account or
+session tables. `0005_profile_avatars` adds bounded PostgreSQL avatar storage.
+The `0004` downgrade drops profile and friendship data; the `0005` downgrade
+drops only avatar data. Only test downgrades against an isolated disposable
+database. To apply the migrations to the isolated test database, set
 `DATABASE_URL` to `cuevo_dev`, `TEST_DATABASE_URL` to `cuevo_test`, and run
 `ENVIRONMENT=test alembic upgrade head`.
 
@@ -191,13 +201,19 @@ URL. Tests inject an in-memory email adapter; they do not send mail or log
 active challenge codes.
 
 See the [auth lifecycle guide](docs/auth-lifecycle.md) for local Mailpit,
-migration, request examples, and repeatable demo-account setup. See
+migration, request examples, and rate-limit policy. See
+[profile/friendship contract](docs/profile-and-friendship.md) for profile
+limits/privacy, friendship transitions, and disposable integration-test
+accounts. See [local demo accounts](docs/development-demo.md) for persistent,
+guarded development-only seed instructions and credentials. See
 [foundation verification](docs/foundation-verification.md) for database
 isolation and environment verification.
 
-The handoff reports successful foundation dependency installation on Python
-3.12 and failure on Python 3.14. The F02 auth suite was also run on Python
-3.13.1 against PostgreSQL 16 (`31 passed`); Python 3.12 remains the documented
-baseline. Python 3.14 is not verified. See
+Before the avatar additions, the 99-test backend suite passed on Python
+3.12.16 and 3.13.18 against isolated PostgreSQL 16. The latest avatar-aware
+suite passed 108 tests on Python 3.12.16; the post-avatar suite has not yet
+been rerun on Python 3.13.18. Python 3.12 remains the documented baseline. The
+handoff reports dependency-installation failure on Python 3.14, which remains
+unverified. See
 [foundation verification](docs/foundation-verification.md) for the recorded
 environment checks.
