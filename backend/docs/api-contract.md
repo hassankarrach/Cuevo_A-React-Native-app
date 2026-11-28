@@ -6,8 +6,12 @@ are implemented separately under `/api/v1` and documented in the
 [auth lifecycle contract](./auth-lifecycle.md). Profile, privacy, music
 preference, friendship and avatar contracts are implemented under `/api/v1` and
 documented in the [profile/friendship contract](./profile-and-friendship.md).
-Other product routes, DTOs, resource-specific rules, and WebSocket delivery
-guarantees are not approved merely because they appear here or in generated
+The recipient-scoped in-app notification API is implemented under `/api/v1`
+and documented in the [notification contract](./notifications.md).
+The collaborative playlist routes and their resource-specific WebSocket
+contract are implemented under `/api/v1` and documented in
+[`playlists.md`](./playlists.md). Other product routes, DTOs, and resource
+rules are not approved merely because they appear here or in generated
 OpenAPI. Preserve `GET /health`; it remains outside the `/api/v1` product
 namespace and retains its current readiness response.
 
@@ -27,6 +31,40 @@ namespace and retains its current readiness response.
 These are proposed wire conventions, not a promise that every product DTO or
 route already exists. Date-only values, limits, cursor expiry, retry retention,
 and individual resource permissions require review with the frontend teammate.
+
+## Public song catalog
+
+The implemented catalog routes are `GET /api/v1/songs` and
+`GET /api/v1/songs/{songId}`. Search accepts optional `q` (up to 100
+characters), exact `genre` (up to 80 characters), `limit` (1–50, default 20),
+and `cursor` (up to 160 characters). Text searches title, artist, and album;
+genre matching is case-insensitive. Results are ordered by normalized title,
+normalized artist, then opaque internal UUID. The cursor is bound to the
+normalized filters and is not an authorization credential. Search responses
+contain `items` and `nextCursor`; no total count is returned.
+
+The response `id` is the server's opaque internal song ID. Provider name and
+track ID appear only in each `sources` object and are never accepted as a
+song ID. Provider uniqueness is case-insensitive by provider name and exact
+by provider track ID. The catalog is globally public and contains no
+viewer-specific or private records; search applies its complete filters in the
+database before returning items. Missing songs use the common privacy-safe
+`404 NOT_FOUND`. A missing or retired provider mapping is omitted from
+`sources`; it does not make the metadata a playable asset.
+
+OpenAPI includes a response example using the approved Levitating metadata.
+For example, `GET /api/v1/songs?q=Levitating&genre=Pop&limit=20` returns an
+`items` array of song objects and `nextCursor`; detail uses the same song
+object. Invalid filters, cursor formats, or cursors from another filter set
+return `422 INVALID_CURSOR` for cursor errors or the standard `422
+VALIDATION_ERROR` envelope for query validation.
+
+The source is static approved metadata from Apple's iTunes Search API, with
+the artifact and no-refresh policy recorded in the
+[song catalog documentation](../data/SONG_CATALOG.md). No artwork files or artwork
+URLs are served, no provider calls occur at request time, and no playback
+provider or SDK is implied. Migrations leave the catalog empty; the guarded
+development import and F07 fixture are separate additive operations.
 
 ## Error behavior
 
@@ -127,9 +165,11 @@ operation IDs or proof of authorization.
 ## OpenAPI and approval boundary
 
 Generated OpenAPI publishes reusable response examples for the shared status
-mapping, implemented authentication routes, and the approved
-profile/friendship/avatar routes. Root-level `x-proposed-api-conventions` and
-`x-proposed-websocket-event-envelope` extensions remain proposals; they do not
-approve other product routes or schemas. Avatar storage and access are
-approved and documented in the profile/friendship contract; other product
-routes remain subject to review before client integration.
+mapping, implemented authentication routes, and approved profile/friendship,
+avatar and playlist routes. Playlist revision, idempotency, authorization and
+WebSocket behavior are specified in the [playlist contract](./playlists.md);
+they are implemented for playlists only and do not establish contracts for
+other product routes. Root-level `x-proposed-api-conventions` and
+`x-proposed-websocket-event-envelope` extensions remain proposals for those
+other routes. Avatar storage and access are approved and documented in the
+profile/friendship contract.

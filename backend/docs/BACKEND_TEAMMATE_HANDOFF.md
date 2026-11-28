@@ -4,7 +4,7 @@ Prepared 2026-11-24 for the backend teammate and their coding agent.
 
 ## 1. Purpose and how to use this document
 
-Build the complete backend for Cuevo while preserving the existing mobile experience. This document supplies frontend facts, agreed scope, suggested API shapes, remaining decisions, ownership, and acceptance criteria. It supersedes `message.txt` where this document is more specific.
+Build the complete backend for Cuevo while preserving the existing mobile experience. This document supplies frontend facts, agreed scope, suggested API shapes, remaining decisions, ownership, and acceptance criteria. It supersedes [`message.txt`](./message.txt) where this document is more specific.
 
 Status labels matter:
 
@@ -135,7 +135,7 @@ Mapping requirements:
 
 `mobile/src/data/songs.json` contains 40 metadata fixtures. `songs.ts` adds local bundled covers. Each JSON record has `id`, `title`, `artist`, `album`, `durationMs`, formatted `duration`, `genre`, `genres`, `releaseDate`, `coverFile`, `artworkUrl`, and `source: { provider, trackId, url, retrievedOn }`.
 
-These are Apple iTunes Search metadata/artwork references, **not playable audio assets or a chosen playback SDK**. Provider track IDs are strings. Preserve the provider and ID separately from the internal song ID. Do not infer legal playback access or provider account capability from this catalog. See `mobile/src/data/SONG_CATALOG.md` for provenance.
+These are Apple iTunes Search metadata/artwork references, **not playable audio assets or a chosen playback SDK**. Provider track IDs are strings. Preserve the provider and ID separately from the internal song ID. Do not infer playback capability from this catalog. The owner-approved metadata-only static artifact now lives at `backend/data/songs.json`; its provenance, field mapping and no-refresh policy are documented in [`SONG_CATALOG.md`](../data/SONG_CATALOG.md). Artwork is not included or served.
 
 ### Notifications and payment summaries
 
@@ -230,16 +230,33 @@ access policies are approved; no local `file://` avatar URL is valid.
 
 ## 8. Playlists and collaborative editing
 
-Required behavior:
+The F07 backend implementation follows the approved decisions recorded in
+`implementation-plan.md` D-05/D-07:
 
-- Create/read/update/list/search playlists; define deletion/archive and removal effects.
-- Subject default: **public and everyone can edit**. Current create UI sets `private: true`: this is a known mismatch to fix during client integration, not a reason to copy the wrong default into the API.
-- Separate discover/read permission from edit permission. Support public/private visibility and everyone/invited editing. Current UI additionally exposes owner-only editing.
-- Owner controls metadata, visibility, edit policy and invitations; editable entries follow the effective edit policy.
-- Only authorized invitees/owner see private playlist data. Mock Home deliberately contains private fixtures; this does not authorize production disclosure.
-- Add/remove/reorder entries atomically using stable entry IDs and revisions. UI currently prevents duplicate songs; proposed initial policy is one occurrence of a song per playlist, pending confirmation.
-- Invite users, accept/decline/revoke, persist collaborators, and notify affected users. Define whether private invitations immediately grant visibility or require acceptance.
-- Resolve stale edits explicitly; no last-write-wins replacement of an entire playlist without conflict protection. Reconnecting users fetch authoritative state.
+- New playlists are public and everyone-editable by default. The mobile create
+  screen's current private default is a known integration mismatch; correct
+  the client later rather than changing the server default.
+- Owner-only editing is a supported extra policy. Invited-only editing is
+  owner-selected and requires an active `playlist_invited_edit` license. Private
+  playlist visibility begins only after an invitation is accepted.
+- Duplicate occurrences are rejected. Names are trimmed to 1–100 characters;
+  descriptions are trimmed to 0–1000 characters. Playlists are hard-deleted;
+  entries/invitations cascade and a deletion receipt supports safe retries.
+- The backend implements authorized CRUD/search, invitation send/respond/
+  revoke, stable entry IDs and authorship, atomic add/remove/reorder, revisioned
+  snapshots, idempotency, privacy-safe list filtering, F06 notifications and
+  post-commit WebSocket invalidations. Stale revisions return 409; clients
+  fetch an authorized snapshot to recover. Full-playlist last-write-wins
+  replacement is not supported.
+- Event delivery is ordered per playlist within one API process. WebSocket
+  subscribers authenticate with the bearer header and are reauthorized after
+  each event; private-access revocation closes the subscription. Revision gaps
+  require an authorized snapshot fetch. Multi-process deployments still need a
+  shared event broker before claiming cross-process fan-out.
+
+See the complete route/error/event contract in
+[`playlists.md`](playlists.md). The API does not expose private mobile mock
+fixtures or viewer-specific permissions in shared events.
 
 Proposed transport:
 
@@ -263,11 +280,27 @@ An adapter can derive ordered UI `songIds` from entries. Metadata editor current
 
 ## 9. Rooms, access, queue voting and playback
 
-Required room fields/capabilities: name, genre, host, visibility, lifecycle, participants/count, current viewer role, current playback summary, join/leave, invitations and join codes. Current room options expose only visibility and genre; **location/time voting policy UI is unfinished**. Add the backend policy model now with coordinated client work later.
+The [room lifecycle/access contract](rooms.md) is implemented. Its fields are
+name, description, host, visibility, lifecycle, participants/count, viewer
+role/capabilities, join/leave, invitations and join codes. Genre and playback
+summary are not part of the current room API. Location/time voting remains
+unavailable.
 
-Subject defaults: public events are discoverable; everyone can vote under the default policy. Private events are discoverable/accessed only by invited users. Current mock queue rejects `visitor` actions, so clarify implicit membership versus explicit Join before client integration; do not accidentally impose an invitation requirement on default public voting.
+Approved room behavior: public active rooms are discoverable and readable and
+votable by any authenticated account without Join; Join is optional and only
+adds a participant. Private room read access is limited to accepted invitees
+and the host. An accepted invite grants read access but not roster membership.
+The host alone invites/revokes, and only the host ends a room; ended is
+terminal. Public participant summaries are visible to public viewers, while
+private summaries require room access. Visibility and vote eligibility are
+separate; public/everyone is the default.
 
-**Proposed voting policy model:** `everyone | invited | location-time`, independent of room visibility. Location/time policy needs latitude/longitude, radius, start/end timestamps, timezone interpretation, acceptable location age/accuracy, denied-permission behavior and the entitlement/license that permits selecting that policy. Radius and timing values are open. Do not use profile city text or BLE proximity as trusted GPS evidence. Document limits of client-reported location.
+The room policy model represents `everyone | invitees`; selecting invitees
+requires a room-policy license, which is not yet implemented. The policy is
+therefore not selectable through the current API. Location/time rules,
+latitude/longitude, radius, time window, timezone, evidence age/accuracy,
+denied-permission behavior, and licensing remain unresolved under D-06. Do not
+use profile city text or BLE proximity as trusted GPS evidence.
 
 Queue behavior visible today:
 
@@ -299,7 +332,15 @@ Server validates host-only playback commands, applies an expected playback revis
 
 Open playback decisions: music provider/SDK, catalog-to-playable-ID mapping, provider account/subscription restrictions, host background/disconnect behavior, host transfer, recovery from playback failures, stale completion events and room end/restart semantics. Prototype provider playback on a real phone before claiming the feature works. Do not add synchronized participant audio.
 
-Join-code UI takes six characters and normalizes case. Freeze alphabet, randomness, uniqueness, expiry/rotation, attempt throttling and whether a private-room code is an invitation credential. Never use fixture `AAAAAA` as production logic. Unauthorized search, code errors, participant/activity feeds and websocket subscriptions must not leak private-room details.
+The six-character code contract is resolved in [rooms.md](rooms.md):
+`23456789ABCDEFGHJKLMNPQRSTUVWXYZ`, cryptographically random, HMAC-digested
+at rest, 24-hour expiry, host rotation/revocation, and five failed attempts per
+account and IP per 15 minutes. A code is not an invitation credential. Accepted
+private invitees can read without a code; code redemption is an explicit extra
+check for joining, and a non-invitee receives the same generic 404 as an
+invalid/expired/revoked code. Repeated redemption while active is idempotent.
+Unauthorized search, counts, activity and websocket subscriptions must not
+leak private-room details.
 
 ## 10. Endpoint capability checklist
 
@@ -347,9 +388,23 @@ Proposed envelope:
 }
 ```
 
-Freeze actual event names and payload schemas for playlist edits, membership/invitation changes, queue/vote changes, playback transitions, room end, notifications and entitlement changes. Document whether payload is a snapshot, patch or invalidation. Authenticate connections, authorize subscriptions and recheck access after permission changes. Avoid bearer tokens in logged URLs.
+F07 freezes playlist event types (`playlist.created`, `playlist.updated`,
+`playlist.invitation.updated`, `playlist.deleted`) and the invalidation-only
+payload in [`playlists.md`](playlists.md). Connections use an Authorization
+bearer header, subscriptions are checked before connect and on every event,
+and permission revocation closes the subscription. Playlist events are
+committed before broadcast and ordered by per-playlist revision within one API
+process. The current process-local broadcaster does not replay a cursor; a
+revision gap sends `playlist.resync_required`, after which the client fetches
+the latest authorized snapshot. Slow queues are bounded and clients are
+disconnected on overflow.
 
-Broadcast after commit. Define ordering per resource, deduplication, reconnect/backoff, heartbeats, token expiry, authorization revocation, cursor retention and resync. On a missing revision or expired cursor, the client fetches a full authorized snapshot. Viewer-specific fields such as `myVote` and capabilities require per-viewer delivery or a separate authorized fetch; never broadcast one user's private state to everyone. Bound slow-client queues and websocket connection/message sizes.
+Queue/vote changes, playback transitions, room end, native notifications and
+other entitlement events still need their own reviewed event names and
+payloads. Viewer-specific fields such as `myVote` and capabilities must never
+be broadcast as shared state. Multi-process deployments require a shared event
+broker before claiming cross-process playlist fan-out. Browser origin/session
+and cookie behavior remain outside this native bearer contract.
 
 ## 12. Bonuses: backend readiness without overstating completion
 
@@ -399,9 +454,9 @@ Existing scope, host-only audio and deferred fetch integration do not need reope
 | Avatar upload | Deferred pending approved durable object-storage and URL/access contract | Provide image-picker payload capabilities and review failure UX when resumed |
 | Verified badge | No badge until a distinct verified-account status exists | Define that status before exposing a badge |
 | Default permissions | Public/everyone defaults and capability response | Fix current private playlist default and unfinished policy UI later |
-| Voting | Atomic vote/ranking/cutoff contract | Confirm downvotes, duplicate/re-suggest and public Join behavior |
-| Invitations/codes | Lifecycle, access grants, alphabet/expiry/revocation | UI review for invite acceptance and six-character input |
-| Location/time | Policy shape and verification limitations | Radius/time rules, consent/denial UX and required native location support |
+| Voting | F09 owns atomic vote/ranking/cutoff; room visibility is separate from eligibility | Confirm downvotes, duplicate/re-suggest; public visitors can read/vote without Join |
+| Invitations/codes | F08 contract in [rooms.md](./rooms.md): host-only invite/revoke, accepted invite read access, code does not grant private access, 32-symbol alphabet, six characters, 24-hour expiry, rotation/revocation and account/IP throttling | Review invite acceptance and six-character UI integration; a code is required only on explicit redemption |
+| Location/time | Deferred: no policy/evidence field is trusted until D-06 and client evidence limitations are approved | Radius/time rules, consent/denial UX and required native location support |
 | Playback provider | Catalog/provider identity adapter and state protocol | Real-phone SDK feasibility; jointly select provider and account requirements |
 | Host unavailable | Proposed pause/timeout/transfer/end policy | Product approval and recovery UX |
 | Realtime | Event schemas, ordering, replay/resync and token handling | Subscription lifecycle and conflict UI |

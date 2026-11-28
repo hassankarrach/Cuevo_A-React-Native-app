@@ -104,10 +104,34 @@ Authenticated profile/privacy, avatar, music-preference, friendship and
 relationship routes are implemented and documented in the
 [profile/friendship contract](docs/profile-and-friendship.md). Avatars use
 durable PostgreSQL storage, validated JPEG/PNG/WebP bytes, a 2 MiB cap, and
-profile-privacy-gated reads. Other product routes and
-shared proposals for pagination, revisions, viewer permissions and WebSocket
-delivery still require review. See the [API contract](docs/api-contract.md)
-for the shared envelope and remaining approval boundaries.
+profile-privacy-gated reads. Room lifecycle, public/private discovery,
+membership, host-managed invitations, protected six-character join codes and
+revisioned WebSocket invalidations are implemented in the
+[room contract](docs/rooms.md); vote eligibility remains separate from
+visibility, with licensed/location-time policies not yet enabled.
+See the [API contract](docs/api-contract.md) for the shared envelope and
+remaining approval boundaries. The [playlist and realtime contract](docs/playlists.md)
+documents CRUD/search, policy and invitation authorization, revisioned
+operations, idempotency, WebSocket events and snapshot resynchronization.
+Authenticated in-app notifications provide recipient-scoped durable unread/read
+state and typed resource references. F07 and F08 produce notifications for
+playlist/room invitation changes. The API does not send OS push notifications
+or register native device tokens; see the [notification contract](docs/notifications.md).
+
+The public song catalog is available at `GET /api/v1/songs` and
+`GET /api/v1/songs/{songId}`. Its source is the approved, static metadata
+artifact at `backend/data/songs.json`; it is not refreshed automatically.
+Migrations create an empty catalog. The explicit `python -m
+app.catalog.importer` command imports the approved records into a guarded local
+development database only. `python -m app.dev_seed` adds the persistent demo
+accounts, deterministic three-song F07 fixture, one collaborative playlist,
+and representative public/private rooms. It is additive/idempotent and skips
+existing or user-modified demo resources. Neither command runs in production
+or from a migration. See [song
+catalog provenance and API contract](data/SONG_CATALOG.md) and [development
+demo data](docs/development-demo.md). Provider IDs are metadata references, not
+internal song IDs or playable media; artwork URLs and image files are not
+served, and no playback SDK is included.
 
 ## Environment variables
 
@@ -183,7 +207,12 @@ The `0004` downgrade drops profile and friendship data; the `0005` downgrade
 drops only avatar data. Only test downgrades against an isolated disposable
 database. To apply the migrations to the isolated test database, set
 `DATABASE_URL` to `cuevo_dev`, `TEST_DATABASE_URL` to `cuevo_test`, and run
-`ENVIRONMENT=test alembic upgrade head`.
+`ENVIRONMENT=test alembic upgrade head`. `0006_song_catalog` adds empty song,
+genre, and provider-record tables; it does not seed metadata.
+`0007_notifications` adds durable recipient-scoped notification records and
+idempotency keys; it creates no sample notifications. `0008_playlists` adds
+collaborative playlists and `0009_rooms` adds rooms, memberships, invitations,
+join-code digests and revisioned room events. Migrations never seed demo data.
 
 ## Tests
 
@@ -204,16 +233,24 @@ See the [auth lifecycle guide](docs/auth-lifecycle.md) for local Mailpit,
 migration, request examples, and rate-limit policy. See
 [profile/friendship contract](docs/profile-and-friendship.md) for profile
 limits/privacy, friendship transitions, and disposable integration-test
-accounts. See [local demo accounts](docs/development-demo.md) for persistent,
+accounts. See the [room lifecycle/access contract](docs/rooms.md) for
+visibility, invitations, Join, code and realtime behavior. See [local demo
+accounts](docs/development-demo.md) for persistent,
 guarded development-only seed instructions and credentials. See
 [foundation verification](docs/foundation-verification.md) for database
-isolation and environment verification.
+isolation and environment verification. The moved
+[backend handoff](docs/BACKEND_TEAMMATE_HANDOFF.md) and
+[frontend handoff](docs/FRONTEND_TEAMMATE_HANDOFF.md) retain project context;
+the [original project request](docs/message.txt) records the initial
+requirements. [Song catalog documentation](data/SONG_CATALOG.md) records the
+approved static metadata source, field mapping, import commands, stable IDs,
+and search contract. Apple metadata records do not provide playable audio or
+an artwork license.
 
-Before the avatar additions, the 99-test backend suite passed on Python
-3.12.16 and 3.13.18 against isolated PostgreSQL 16. The latest avatar-aware
-suite passed 108 tests on Python 3.12.16; the post-avatar suite has not yet
-been rerun on Python 3.13.18. Python 3.12 remains the documented baseline. The
-handoff reports dependency-installation failure on Python 3.14, which remains
-unverified. See
+The current 125-test backend suite passed on Python 3.13.1 against isolated
+PostgreSQL 16. Migration `0006_song_catalog` was applied from an empty
+database, and Alembic reported no model/schema drift. Python 3.12 remains the
+documented baseline; the handoff reports dependency-installation failure on
+Python 3.14, which remains unverified. See
 [foundation verification](docs/foundation-verification.md) for the recorded
 environment checks.

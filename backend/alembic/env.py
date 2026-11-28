@@ -5,7 +5,11 @@ from sqlalchemy import engine_from_config, pool
 
 from app.core.config import get_settings
 import app.auth.models
+import app.catalog.models
 import app.profiles.models
+import app.notifications.models
+import app.playlists.models
+import app.rooms.models
 from app.db.base import Base
 
 
