@@ -1,6 +1,12 @@
 # Cuevo — team responsibilities
 
-This document applies the agreed ownership split to `PROJECT_PLAN.md`. You lead the React Native mobile application and responsive web bonus, and contribute a bounded backend feature. Your teammate leads the backend and shared-state logic.
+This document applies the agreed ownership split to `PROJECT_PLAN.md`. You lead the React Native mobile application and responsive web bonus. Your teammate and their agents own all backend work and shared-state logic.
+
+## Backend ownership rule — 2026-11-26
+
+The frontend assistant is named **GPTato**. Whenever backend work is needed, give the user a short, ready-to-send request introducing GPTato naturally, then explaining the finding, its client impact, and the requested functionality, fix, or contract. Do not require a fixed phrase after the introduction. Do not send the message without explicit authorization.
+
+The frontend owner and their agents must never directly change files under `backend/`, including configuration, migrations, tests, scripts, and documentation. Request any required functionality or fix from the teammate and their agents. This rule supersedes earlier ownership plans, including frontend implementation of profiles/friendships. Reading contracts and running existing backend services, migrations, and tests for local integration are allowed; backend file changes belong to the teammate. Integrate their work through Git merges preserving authorship; coordinate backend-file conflicts with them.
 
 ## Your main responsibilities
 
@@ -36,19 +42,9 @@ Own the React web client after the mandatory mobile flows are stable:
 
 The web application is a second client of the existing system, not a separate backend or database. Supporting both Android and iOS is not required by this ownership plan.
 
-### 3. Bounded backend contribution: profiles and friendships
+### 3. Profiles and friendships client integration
 
-Own this feature end to end, with your teammate reviewing the schema, API, and authorization:
-
-- Profile and music-preference database changes.
-- APIs for reading and updating profiles.
-- Public, friends-only, and private field filtering on the backend.
-- Friend request, acceptance, removal, and listing behavior, agreed before implementation.
-- Authentication and access checks for these endpoints.
-- Tests for privacy boundaries and friendship state transitions.
-- API documentation and corresponding mobile screens.
-
-Agree contracts and migrations with your teammate before coding. Reuse the shared authentication and database conventions. This contribution gives you backend experience without taking ownership of another complete service.
+Own the screens and client API integration. Request profile persistence, music preferences, privacy filtering, friendship endpoints, authorization, migrations, tests, and API documentation from the backend teammate and their agents. Agree the contracts before wiring the client; do not implement backend files here.
 
 ### 4. Client side of the other bonuses
 
@@ -69,7 +65,7 @@ These features depend on backend contracts and shared integration work; owning t
 - Offline synchronization endpoints, conflict rules, and duplicate-operation prevention.
 - IoT event lookup and access control.
 - Security controls, backend action logs, load testing, CI, and deployment/setup documentation.
-- Review and integration support for your profiles/friendships backend work.
+- All profiles/friendships backend implementation and client integration support.
 
 ## Shared responsibilities
 
@@ -85,7 +81,7 @@ These features depend on backend contracts and shared integration work; owning t
 
 1. Learn the React Native foundations while building navigation and a basic API-connected screen.
 2. Prototype music SDK playback and social login on a real phone; spike native IoT feasibility early.
-3. Build account screens and implement profiles/friendships end to end.
+3. Build account and profiles/friendships screens and integrate the teammate's APIs.
 4. Build Playlist Editor screens and integrate real-time behavior.
 5. Build event/voting screens and integrate playback.
 6. Complete mobile error handling, reconnects, device tests, and mandatory acceptance checks.
@@ -94,6 +90,6 @@ These features depend on backend contracts and shared integration work; owning t
 
 ## Workload boundaries
 
-Your largest commitments are learning React Native, completing the mandatory mobile application, and delivering the web bonus. Keep backend contribution focused on profiles/friendships initially. If the client workload grows, your teammate should take suitable web/API integration or bonus support tasks rather than leaving all client and bonus work with you.
+Your largest commitments are learning React Native, completing the mandatory mobile application, and delivering the web bonus. All backend implementation belongs to the teammate and their agents. Coordinate API contracts and workload without directly modifying backend files.
 
 Do not begin full web implementation at the expense of unfinished mandatory mobile flows. Bonus assessment depends on the mandatory project working completely.

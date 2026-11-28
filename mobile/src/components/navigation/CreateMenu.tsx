@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import ModalSurface from '../ModalSurface';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -5,7 +7,7 @@ import { useEffect, useRef, useState, type ComponentRef, type RefObject } from '
 import { BackHandler, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import AppToast from '../AppToast';
+import { ToastViewport } from '../AppToast';
 import JoinCodeInput from './JoinCodeInput';
 import PrimaryButton from '../PrimaryButton';
 import CreateMenuBackdrop from './CreateMenuBackdrop';
@@ -25,6 +27,9 @@ const actions = [
 ];
 
 export default function CreateMenu({ onClose, blurTarget }: { onClose: () => void; blurTarget: RefObject<ComponentRef<typeof View> | null> }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   const [action, setAction] = useState<Action | null>(null);
   const [value, setValue] = useState('');
@@ -98,10 +103,11 @@ export default function CreateMenu({ onClose, blurTarget }: { onClose: () => voi
 
   return (
     <Modal transparent animationType="fade" onRequestClose={onClose}>
+      <ToastViewport>
       <KeyboardAvoidingView style={[styles.overlay, { paddingTop: Math.max(insets.top, 20), paddingBottom: Math.max(insets.bottom, 20) }]} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss actions" />
         <View style={styles.sheet} accessibilityViewIsModal onAccessibilityEscape={onClose}>
-        <ModalSurface />
+        <ModalSurface solid />
           <View style={styles.header}>
             {action && <Pressable onPress={() => { setAction(null); setVisibility('public'); setGenre('Mixed'); setValue(''); setError(''); setCode(Array(6).fill('')); }} accessibilityRole="button" accessibilityLabel="Back to actions" style={styles.iconButton}><Ionicons name="arrow-back" size={22} color={colors.text} /></Pressable>}
             <Text accessibilityRole="header" style={styles.title}>{current?.title ?? 'Make room for music.'}</Text>
@@ -111,7 +117,7 @@ export default function CreateMenu({ onClose, blurTarget }: { onClose: () => voi
             <View style={styles.form}>
               <Text style={styles.label}>{action === 'join' ? 'Invite code' : action === 'room' ? 'Room name' : 'Playlist name'}</Text>
               {action === 'join' ? <JoinCodeInput value={code} onChange={setCode} onSubmit={join} /> :
-                <TextInput value={value} onChangeText={text => { setValue(text); setError(''); }} maxLength={60} autoCapitalize="sentences" autoCorrect={false} placeholder="Give it a name" placeholderTextColor="#A19892" accessibilityLabel={action === 'room' ? 'Room name' : 'Playlist name'} style={styles.input} selectionColor={colors.primary} />}
+                <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={value} onChangeText={text => { setValue(text); setError(''); }} maxLength={60} autoCapitalize="sentences" autoCorrect={false} placeholder="Give it a name" placeholderTextColor={colors.textSecondary} accessibilityLabel={action === 'room' ? 'Room name' : 'Playlist name'} style={styles.input} selectionColor={colors.primary} />}
               {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
               {action === 'room' && <>
                 <Text style={styles.label}>Visibility</Text>
@@ -134,12 +140,12 @@ export default function CreateMenu({ onClose, blurTarget }: { onClose: () => voi
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
-      <AppToast />
+      </ToastViewport>
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20, backgroundColor: 'rgba(35,27,24,0.22)' },
   sheet: { width: '100%', maxWidth: 420, maxHeight: '85%', backgroundColor: 'transparent', borderRadius: 28, padding: 20, boxShadow: '0px 12px 40px rgba(35,27,24,0.12)' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 12 },

@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../theme/useThemedStyles';
+import { useAppColors } from '../theme/useAppColors';
 import AccountBadges from './AccountBadges';
 import SearchPickerModal from './SearchPickerModal';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -11,6 +13,9 @@ import { fonts } from '../theme/fonts';
 export default function InvitePeopleModal({ visible, onClose, memberIds, title }: {
   visible: boolean; onClose: () => void; memberIds: string[]; title: string;
 }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const [invitedIds, setInvitedIds] = useState<string[]>([]);
   return <SearchPickerModal visible={visible} onClose={onClose} title={title} placeholder="Search people by name or username">
     {query => {
@@ -36,7 +41,7 @@ export default function InvitePeopleModal({ visible, onClose, memberIds, title }
     }}
   </SearchPickerModal>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   note: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 19, color: colors.textSecondary, marginVertical: 12 },
   person: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
   avatar: { width: 46, height: 46, borderRadius: 11, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },

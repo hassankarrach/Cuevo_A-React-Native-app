@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
+import { useAppColors } from '../../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -14,6 +16,9 @@ import { getQueueSong, queueSongId } from '../../../state/roomQueue';
 export default function RoomQueue({ tracks, currentId, canVote, onVote, onRemove, onSuggest, isPlaying, ended }: {
   tracks: QueueTrack[]; currentId: string | null; canVote: boolean; onVote: (id: string, vote: Vote) => void; onRemove?: (id: string) => void; onSuggest?: () => void; isPlaying: boolean; ended: boolean;
 }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   return (
     <View style={styles.section}>
       <View style={styles.heading}>
@@ -55,7 +60,7 @@ export default function RoomQueue({ tracks, currentId, canVote, onVote, onRemove
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   remove: { width: 36, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   suggest: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 12 },
   suggestLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.primary },

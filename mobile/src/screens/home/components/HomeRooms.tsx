@@ -1,3 +1,4 @@
+import { useAppColors, type AppColors } from '../../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -5,7 +6,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { discoverRooms, roomGenres, type RoomSort } from '../../../state/roomDiscovery';
 import { rankedTracks } from '../../../state/roomQueue';
 import { useMockRooms } from '../../../state/MockRoomsContext';
-import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 import RoomListeners from './RoomListeners';
 import RoomCardBlur from './RoomCardBlur';
@@ -19,6 +19,8 @@ const roomPreviews: { id: string; name: string; track: string; artist: string; l
 ];
 
 export default function HomeRooms({ grid = false, query = '', genre = 'all', sort = 'default' }: { grid?: boolean; query?: string; genre?: string; sort?: RoomSort }) {
+  const colors = useAppColors();
+  const styles = makeStyles(colors);
   const { rooms } = useMockRooms();
   // Home intentionally lists rooms of both visibility types.
   const createdRooms = Object.entries(rooms).filter(([, room]) => room.name).map(([id, room]) => ({ id, name: room.name!, track: 'No songs yet', artist: 'Suggest the first song', listeners: room.participantIds.length, genre: 'pop' as RoomGenre, gradient: roomPreviews[0].gradient, blurColors: roomPreviews[0].blurColors }));
@@ -70,7 +72,7 @@ export default function HomeRooms({ grid = false, query = '', genre = 'all', sor
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   empty: { paddingVertical: 40, alignItems: 'center', gap: 8 },
   emptyTitle: { fontFamily: fonts.semibold, fontSize: 18, color: colors.text },
   emptyCopy: { fontFamily: fonts.regular, fontSize: 13, color: colors.textSecondary, textAlign: 'center' },
@@ -85,7 +87,7 @@ const styles = StyleSheet.create({
   viewAllLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary },
   carousel: { marginHorizontal: -20 },
   cards: { gap: 12, paddingHorizontal: 20, paddingVertical: 4 },
-  card: { width: 164, height: 164, padding: 2, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EEEAE4', boxShadow: '0px 3px 10px rgba(71, 43, 26, 0.035)' },
+  card: { width: 164, height: 164, padding: 2, borderRadius: 26, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, boxShadow: '0px 3px 10px rgba(71, 43, 26, 0.035)' },
   banner: { height: 57, borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   glow: { ...StyleSheet.absoluteFill, backgroundImage: 'radial-gradient(ellipse farthest-corner at 25% 0%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 75%)' },
   details: { flex: 1, paddingHorizontal: 4, paddingTop: 7, paddingBottom: 3 },

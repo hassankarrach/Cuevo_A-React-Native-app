@@ -1,3 +1,6 @@
+import { useTheme } from '../../../theme/ThemeContext';
+import { useThemedStyles } from '../../../theme/useThemedStyles';
+import { useAppColors } from '../../../theme/useAppColors';
 import ModalSurface from '../../../components/ModalSurface';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
@@ -6,9 +9,25 @@ import { AccessibilityInfo, Animated, Modal, Pressable, ScrollView, StyleSheet, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
+import { useAuth } from '../../../state/AuthContext';
+import { showToast } from '../../../utils/toast';
 
 type Icon = ComponentProps<typeof Ionicons>['name'];
 export default function AccountMenuModal({ visible, top, onClose }: { visible: boolean; top: number; onClose: () => void }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+  const { toggleTheme } = useTheme();
+  const { logout } = useAuth();
+  const [loggingOut, setLoggingOut] = useState(false);
+  async function signOut() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    onClose();
+    try { await logout(); }
+    catch { showToast('error', 'Couldn’t confirm logout', 'Please check your connection.'); }
+    finally { setLoggingOut(false); }
+  }
+
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [pop] = useState(() => new Animated.Value(0));
@@ -35,22 +54,23 @@ export default function AccountMenuModal({ visible, top, onClose }: { visible: b
   return <Modal visible={visible} transparent animationType="none" onShow={popIn} onRequestClose={onClose}>
     <View style={styles.overlay}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Dismiss account menu" />
-      <Animated.View accessibilityViewIsModal onAccessibilityEscape={onClose} style={[styles.panel, { top: panelTop, width: width - 40, maxHeight: Math.max(180, Math.min(560, height - panelTop - insets.bottom - 20)), transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) }, { translateY: pop.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }] }]}>
-        <ModalSurface radius={23} />
+      <Animated.View accessibilityViewIsModal onAccessibilityEscape={onClose} style={[styles.panel, { top: panelTop, width: width - 36, maxHeight: Math.max(180, Math.min(560, height - panelTop - insets.bottom - 20)), transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) }, { translateY: pop.interpolate({ inputRange: [0, 1], outputRange: [-8, 0] }) }] }]}>
+        <ModalSurface solid radius={23} />
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           {item('Profile', 'person-circle', () => navigate('/profile'))}
           {item('Settings', 'settings', () => navigate('/settings'))}
+          {item(colors.dark ? 'Switch to light mode' : 'Switch to dark mode', colors.dark ? 'sunny-outline' : 'moon-outline', toggleTheme)}
           {item('Help & about', 'help-circle', () => navigate('/help'))}
           <View style={styles.divider} />
-          {item('Log out', 'log-out', () => { onClose(); router.dismissAll(); router.replace('/'); }, true)}
+          {item('Log out', 'log-out', () => { void signOut(); }, true)}
         </ScrollView>
       </Animated.View>
     </View>
   </Modal>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(35,27,24,0.16)' },
-  panel: { position: 'absolute', left: 20, borderRadius: 23, backgroundColor: 'transparent', borderWidth: 1, borderColor: 'transparent', boxShadow: '0px 12px 35px rgba(55,34,21,0.18)' },
+  panel: { position: 'absolute', left: 18, borderRadius: 23, backgroundColor: 'transparent', borderWidth: 1, borderColor: 'transparent', boxShadow: '0px 12px 35px rgba(55,34,21,0.18)' },
   divider: { height: 1, backgroundImage: 'linear-gradient(to right, rgba(220,216,211,0) 0%, #DCD8D3 50%, rgba(220,216,211,0) 100%)' },
   content: { padding: 8, paddingBottom: 12 },
   item: { minHeight: 52, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 11, borderRadius: 16 },

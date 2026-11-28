@@ -1,6 +1,6 @@
 # Bonus frontend preparation plan
 
-Updated: 2026-11-21.
+Updated: 2026-11-22.
 
 ## Decisions and current focus
 
@@ -116,7 +116,59 @@ Cached reading and restart persistence work. Pending-operation state and conflic
 
 ### Product flow
 
-Add a Nearby entry point on Rooms. A physical beacon broadcasts an identifier; the phone detects it; the backend resolves it to room information the user is allowed to see; selecting a result opens the existing room page.
+Add a Nearby entry point on Rooms. The user's Mac or a second phone broadcasts a BLE identifier; the phone running Cuevo detects it; the backend resolves it to room information the user is allowed to see; selecting a result opens the existing room page. No dedicated beacon purchase is planned.
+
+### Agreed broadcaster plan — 2026-11-22
+
+Keep this a small school-project implementation, taught one file/change at a time. This is a plan only; no broadcaster, Bluetooth library or Nearby screen has been implemented.
+
+Roles:
+- Receiver: the user's real Android phone running Cuevo.
+- First broadcaster to test: the user's Mac, using a small foreground Core Bluetooth helper with Start/Stop advertising.
+- Alternative: a second phone with BLE peripheral/advertising support and a foreground advertising utility. Check its actual support before relying on it.
+- The broadcaster is a separate demo tool initially. Adding host broadcasting inside Cuevo is a later option, not required for the first scanning implementation.
+
+#### Step 1 — prove the hardware path
+
+- Run a Mac BLE broadcaster and advertise one test 128-bit service UUID. Use the same UUID with a second phone if the Mac test fails.
+- Use a BLE scanner on the Android phone to verify that UUID is visible; turning off advertising must remove it from new scan results.
+- Keep both devices awake and tools open during this first test. Document the working hardware and foreground limits.
+- Do not build polished screens or assume the Mac works until this real detection succeeds.
+
+#### Step 2 — add real scanning to Cuevo
+
+- Choose a native BLE scanning library verified against the installed Expo SDK/React Native version. Do not assume it also supports broadcasting.
+- Configure platform permission descriptions and runtime requests. Request access when the user opens Nearby; handle Bluetooth off and unsupported hardware.
+- Produce a new Android APK containing the native module; the already installed APK will not gain Bluetooth support through a JavaScript edit.
+- First milestone: Cuevo detects the same test UUID on the real phone. iOS receiver support/device QA follows after Android detection works.
+
+#### Step 3 — build a small Nearby flow
+
+- Rooms → Nearby → Scan. Use a short foreground scan (initial target: 10 seconds) and stop it on leaving the screen/backgrounding.
+- Show scanning, results, empty, permission-denied, Bluetooth-off and retry states.
+- Deduplicate by the agreed advertised identifier. A new scan replaces old results so stopped broadcasters do not remain indefinitely.
+- For initial local demonstration only, map the test UUID to one fixture room and open the existing room page. Record this as local mapping, not backend integration.
+
+#### Step 4 — connect the backend
+
+- Agree a host-authorized mapping between an opaque advertised UUID and an active room. Use an identifier carried in the advertisement, not a Bluetooth MAC address or device display name.
+- The receiver sends the detected UUID to an authenticated lookup endpoint. The backend returns only room information that user may see.
+- Unknown, stopped/unassigned and inaccessible identifiers get safe empty/unavailable feedback. Detection does not grant membership or voting rights.
+- Bluetooth discovery can work without internet, but real room lookup needs connectivity; show a connection message when lookup cannot run.
+
+#### Step 5 — test and document the demo
+
+- Mac → Android detection; optionally second phone → Android with the same identifier format.
+- Permission denied, Bluetooth off, no broadcaster, repeated advertisements, scan again, broadcaster stopped and failed room lookup.
+- Public/private room access, opening the correct room and no automatic join.
+- Signal strength is only a rough signal indicator, not exact distance or proof of presence. No background discovery or automatic notifications in this first version.
+- Record setup/start/stop instructions and clarify with the evaluator whether a Mac/phone broadcaster satisfies the subject's IoT criterion before declaring bonus acceptance.
+
+Ownership: our side handles the broadcaster demo, scanning, UI, APK and real-device checks. Teammate handles identifier assignment, lookup and server access control; agree the identifier format together.
+
+Next action: prove **Mac broadcasting → Android detection** using one UUID, before changing Cuevo.
+
+References: [Apple advertising API](https://developer.apple.com/documentation/corebluetooth/cbperipheralmanager/startadvertising(_:)), [Android advertising API](https://developer.android.com/reference/android/bluetooth/le/BluetoothLeAdvertiser), [Android Bluetooth permissions](https://developer.android.com/develop/connectivity/bluetooth/bt-permissions).
 
 ### Mobile and client work
 
@@ -196,3 +248,14 @@ At the user's request, the Payment reference page was built before Plan & usage.
 Added /subscription via Settings → Billing → Cuevo Plus, with the user-requested price of 99 DH, a light orange/peach blurred-edge background and a Continue link to account payment-method setup. No recurrence, trial, discount or completed subscription activation is assumed. Usage display, entitlement adapter, confirmed limits and actual plan switching remain pending.
 
 - Plus offer page design is on standby at the user's request. Current design focus returned to the payment-method page, whose card preview now uses the cleaned user-requested CIH Sayidati cover. Do not resume revising the Plus gradient without direction.
+
+### LightBlue broadcaster test setup — 2026-11-22
+
+- Created `Cuevo Test` in LightBlue on the user's Mac: Virtual Devices → + → Blank → Save; edited name and default service. Left broadcasting switch on.
+- Service UUID: `C0E00001-7A1B-4C2D-8E3F-123456789ABC`. LightBlue's editor accepted it as 32 hexadecimal digits without hyphens.
+- Log confirmed the service was added and `Did start advertising`. The logged advertisement data contains local name `Cuevo Test` only; the custom service is configured as GATT, but its UUID has NOT been verified as included in advertising. Do not assume UUID-filtered passive scanning will detect it. Verify phone scan data; if needed, adjust broadcaster tooling or agree a connection-based read before app integration.
+- Next: Android nRF Connect → Scanner → Scan; find Cuevo Test, inspect advertisement data and optionally connect to inspect its service UUID. Clear/restart scan after disabling the broadcaster to confirm fresh detections stop. Phone-side detection remains unverified.
+
+### Nearby UI checkpoint — 2026-11-22
+
+The `/nearby` map/radar and shared search/results panel are implemented as a UI simulation. A cancellable five-second search reveals existing public, active fixture rooms and links to their local detail routes. It does not scan BLE, read GPS or resolve broadcast identifiers. This does not complete the proximity bonus or change the agreed Mac/second-phone broadcaster → Android receiver plan. See UI_PROGRESS for final styling and SESSION_HANDOFF for source files and validation. Real phone-side broadcaster detection is still unverified; preserve the LightBlue advertisement-versus-GATT caveat above.

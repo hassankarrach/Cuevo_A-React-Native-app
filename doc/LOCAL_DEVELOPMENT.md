@@ -158,3 +158,85 @@ When adding a new face to the existing runtime `fontAssets` map, Fast Refresh ca
 ## Session close — 2026-11-21
 
 The user requested a documentation/commit/push checkpoint and closing Simulator. Earlier instructions to leave Simulator running are superseded for this checkpoint. Reuse the existing device when preview resumes; no reset/reinstallation is needed. See SESSION_HANDOFF for the current loading/billing/discovery behavior.
+
+## Android APK preview — 2026-11-21
+
+- Expo project: `@zerojsxs-team/cuevo`, ID `95ebb846-bc8b-40ff-b27c-0fb92dcafe0e`. Workspace linked via EAS init; CLI sign-in completed through browser authentication.
+- Android package: `com.cuevo.app`. Adaptive icon now references the selected orange Cuevo design.
+- `mobile/eas.json` defines a standalone `preview` profile (`distribution: internal`, Android `buildType: apk`, Node 26.13.1). No Expo Go or Metro is required to run the APK.
+- Build command, from `mobile`: `npx eas-cli@latest build --platform android --profile preview`.
+- First build: https://expo.dev/accounts/zerojsxs-team/projects/cuevo/builds/4f0ee720-3ffc-4167-bf3d-a02b0eeb9602 . Expo generated/stores its Android signing keystore. Reuse it for later updates; do not commit signing secrets.
+- Install on a phone: open the completed build link, download APK, open it, allow that browser/file manager to install unknown apps if prompted, then install Cuevo.
+- Notification permission UI is included; real Android remote push delivery still requires FCM configuration/token/backend work. APK/device behavior must be checked on the user's phone.
+
+### First Android APK completed — verified 2026-11-22
+
+Expo build `4f0ee720-3ffc-4167-bf3d-a02b0eeb9602` finished successfully.
+APK: https://expo.dev/artifacts/eas/wJlzaF_5kWxIlM1yhpqe93Gha51fWhfZe2mpcgpao5Y.apk
+Physical-phone installation and behavior still need user verification.
+
+## Nearby page preview — 2026-11-22
+
+Reuse the existing Metro server on 8081 when available. This session started it with `npm run start -- --port 8081 --max-workers 2` from `mobile`; do not assume it is still running. Open Rooms → Nearby in Expo Go, or open the route directly on the existing simulator:
+
+```bash
+xcrun simctl openurl booted 'exp://127.0.0.1:8081/--/nearby?__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1'
+```
+
+After five seconds, the same panel displays fixture room results. Stop cancels and Scan nearby restarts; this does not use Bluetooth/GPS. The real map tiles require internet access. No map API key or new package is needed for the current OpenStreetMap version. MapTiler static images/custom styles remain an alternative requiring an owner-provided key; no signup was performed.
+
+Latest source lint/typecheck pass and results layout was visually checked on the existing iPhone 17 Simulator. This session did not rebuild the standalone iOS app or Android APK. Reload Expo Go for source edits; rebuild installed standalone snapshots when needed. Do not reset or recreate the simulator.
+
+
+## Local backend and client connection — 2026-11-26
+
+Initial setup is complete: Python 3.12 virtual environment in `backend/.venv`,
+ignored `backend/.env` with a generated auth secret, PostgreSQL 16 and Mailpit
+Compose services, and development migrations through `0005_profile_avatars` (applied 2026-11-27).
+The isolated `cuevo_test` database is separate from development data.
+
+Start services after restarting Docker Desktop:
+
+```bash
+cd backend
+docker compose up -d --wait postgres mailpit
+.venv/bin/alembic upgrade head
+.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+- API readiness: http://127.0.0.1:8000/health
+- API explorer: http://127.0.0.1:8000/docs
+- Development email inbox: http://127.0.0.1:8025
+- Stop API with Ctrl+C; stop services with `docker compose stop`. Keep the volume
+  to retain local accounts. No production email delivery is configured.
+
+`mobile/.env.example` documents `EXPO_PUBLIC_API_URL`; an ignored `.env.local`
+currently points at `http://127.0.0.1:8000` for the iOS Simulator. Expo embeds
+public environment values in the client bundle; never put the backend auth
+secret or database credentials there. Fully reload Expo after changing the URL.
+Android Emulator uses `http://10.0.2.2:8000`. A physical phone needs the Mac's LAN
+IP, the same local network and uvicorn listening on `0.0.0.0`; the server is
+currently bound to loopback for simulator development. An installed standalone
+build needs rebuilding to include changed source/configuration. Browser preview
+also needs a reviewed backend CORS configuration; native requests do not use CORS.
+
+`mobile/src/api/client.ts` handles JSON, raw avatar upload, authenticated image reads, structured errors, timeouts and Retry-After. Connected features and remaining endpoints are listed in [UI_PROGRESS.md](UI_PROGRESS.md#existing-backend-apis-client-integration-status). Initial profile setup, recovery and Settings password change are now connected; separate profile editor saves remain local.
+
+Latest checks: mobile typecheck/lint and **23 client tests pass**; full merged backend suite previously **108 passed**, and focused recovery/password-change tests passed separately. No device end-to-end password changes were performed. Keep test/development databases separate.
+
+The existing backend virtual environment lacks the new Pillow dependency. This session installed the declared Pillow 11.3.0 only into `/private/tmp/cuevo-review-deps` for review without modifying backend files. Current API/test commands used `PYTHONPATH=/private/tmp/cuevo-review-deps` before `.venv/bin/uvicorn` or `.venv/bin/python`. That temporary path may disappear after cleanup; the standard commands above require the declared dependencies installed. Backend environment/dependency maintenance belongs to the teammate.
+
+## Native Google sign-in — 2026-11-27
+
+The iOS client uses `@react-native-google-signin/google-signin` with the public iOS/server client IDs from the backend auth lifecycle guide. The app config registers the reversed iOS client ID through its config plugin. No OAuth client secret or Firebase is used. Backend Google environment variables must be configured; frontend ownership does not permit editing backend configuration.
+
+Login/sign-up exchange a native ID token at `/api/v1/auth/google`; only Cuevo session tokens are securely persisted. Settings → Linked accounts loads real provider state and explicitly links/unlinks with the current Cuevo password. A Google-only account must set a password through account recovery before disconnecting; the recovery UI is now connected from login → Forgot password. Email collisions require existing-account login and explicit linking. Android/browser Google flows are outside the approved iOS contract.
+
+Expo Go cannot load this native module. Email login remains usable there; testing Google requires a rebuilt installed Cuevo iOS app. Reuse the existing simulator and Metro, and do not hand-edit generated `ios/` files. Google account authentication/consent must be completed by the user.
+
+
+### Native build and manual test checkpoint — 2026-11-27
+
+The Google plugin was applied via Expo prebuild; a native Debug build succeeded and installed on the existing iPhone 17 using `npx expo run:ios --device 158AB8CD-3044-4069-93A6-73D8C9CAC59A --no-bundler`. Reuse Metro; do not reset the simulator or hand-edit generated native code. This Debug app consumes Metro source changes; native module/config changes require rebuilding. Google prompt launch is verified, full Google authentication/link/unlink is not.
+
+Manual tests still needed: initial profile photo upload/reload, recovery request → Mailpit code → reset → login, Settings current/new password → update → continued session/new-password login, and Google user authentication/link/unlink. Password test credentials should be entered by the user; do not reset a real account as an automated smoke test. The recovery endpoint sends mail only for existing accounts but always returns the same generic accepted response. Successful recovery revokes all sessions; Settings change-password preserves the current session with rotated credentials and revokes others.

@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -14,6 +16,9 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 
 export default function PaymentScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   const { from } = useLocalSearchParams<{ from?: string }>();
   const { saveMethod } = useBilling();
@@ -36,7 +41,7 @@ export default function PaymentScreen() {
 
 
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
-    <StatusBar style="dark" />
+    <StatusBar style={colors.dark ? 'light' : 'dark'} />
     <View style={styles.header}>
       <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/settings')} style={styles.back} accessibilityRole="button" accessibilityLabel="Back">
         <Ionicons name="arrow-back" size={23} color={colors.text} accessible={false} />
@@ -74,20 +79,20 @@ export default function PaymentScreen() {
         <View style={styles.form}>
           <View style={styles.field}>
             <Text style={styles.label}>Cardholder name</Text>
-            <TextInput value={name} onChangeText={setName} placeholder="Name on card" accessibilityLabel="Cardholder name" autoCapitalize="words" autoCorrect={false} maxLength={60} style={styles.input} placeholderTextColor="#A19892" selectionColor={colors.primary} />
+            <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={name} onChangeText={setName} placeholder="Name on card" accessibilityLabel="Cardholder name" autoCapitalize="words" autoCorrect={false} maxLength={60} style={styles.input} placeholderTextColor={colors.textSecondary} selectionColor={colors.primary} />
           </View>
           <View style={styles.field}>
             <Text style={styles.label}>Card number</Text>
-            <TextInput value={number} onChangeText={text => setNumber(text.replace(/\D/g, '').slice(0, 19).replace(/(.{4})/g, '$1 ').trim())} placeholder="0000 0000 0000 0000" accessibilityLabel="Card number" keyboardType="number-pad" autoComplete="off" maxLength={23} style={styles.input} placeholderTextColor="#A19892" selectionColor={colors.primary} />
+            <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={number} onChangeText={text => setNumber(text.replace(/\D/g, '').slice(0, 19).replace(/(.{4})/g, '$1 ').trim())} placeholder="0000 0000 0000 0000" accessibilityLabel="Card number" keyboardType="number-pad" autoComplete="off" maxLength={23} style={styles.input} placeholderTextColor={colors.textSecondary} selectionColor={colors.primary} />
           </View>
           <View style={styles.fieldRow}>
             <View style={[styles.field, styles.half]}>
               <Text style={styles.label}>Expiry date</Text>
-              <TextInput value={expiry} onChangeText={text => { const digits = text.replace(/\D/g, '').slice(0, 4); setExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits); }} placeholder="MM/YY" accessibilityLabel="Expiry date" keyboardType="number-pad" autoComplete="off" maxLength={5} style={styles.input} placeholderTextColor="#A19892" selectionColor={colors.primary} />
+              <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={expiry} onChangeText={text => { const digits = text.replace(/\D/g, '').slice(0, 4); setExpiry(digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits); }} placeholder="MM/YY" accessibilityLabel="Expiry date" keyboardType="number-pad" autoComplete="off" maxLength={5} style={styles.input} placeholderTextColor={colors.textSecondary} selectionColor={colors.primary} />
             </View>
             <View style={[styles.field, styles.half]}>
               <Text style={styles.label}>CVV</Text>
-              <TextInput value={cvv} onChangeText={text => setCvv(text.replace(/\D/g, '').slice(0, 4))} placeholder="•••" accessibilityLabel="Card security code" keyboardType="number-pad" autoComplete="off" secureTextEntry maxLength={4} style={styles.input} placeholderTextColor="#A19892" selectionColor={colors.primary} />
+              <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={cvv} onChangeText={text => setCvv(text.replace(/\D/g, '').slice(0, 4))} placeholder="•••" accessibilityLabel="Card security code" keyboardType="number-pad" autoComplete="off" secureTextEntry maxLength={4} style={styles.input} placeholderTextColor={colors.textSecondary} selectionColor={colors.primary} />
             </View>
           </View>
         </View>
@@ -98,7 +103,7 @@ export default function PaymentScreen() {
   </SafeAreaView>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFCF8' },
   body: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 12 },

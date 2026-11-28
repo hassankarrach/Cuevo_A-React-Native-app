@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
+import { useAppColors } from '../../../theme/useAppColors';
 import SearchResultsSkeleton from './SearchResultsSkeleton';
 import AccountBadges from '../../../components/AccountBadges';
 import ModalSurface from '../../../components/ModalSurface';
@@ -27,6 +29,8 @@ const roomBackgrounds: Record<string, string> = {
 };
 
 function ArtworkImage({ source, fallback }: { source: ImageSourcePropType; fallback: ImageSourcePropType }) {
+  const styles = useThemedStyles(baseStyles);
+
   const [failed, setFailed] = useState(false);
   return <Image source={failed ? fallback : source} onError={() => setFailed(true)} style={styles.artwork} accessible={false} />;
 }
@@ -34,6 +38,9 @@ function ArtworkImage({ source, fallback }: { source: ImageSourcePropType; fallb
 const roomNames: Record<string, string> = { 'kitchen-disco': 'Kitchen Disco', 'late-nights': 'Late Nights', 'on-repeat': 'On Repeat' };
 
 export default function SearchModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   const { profile, accountStatus } = useLocalProfile();
   const [query, setQuery] = useState('');
@@ -98,11 +105,11 @@ export default function SearchModal({ visible, onClose }: { visible: boolean; on
 
   return <Modal visible={visible} transparent animationType="slide" onShow={() => input.current?.focus()} onRequestClose={close}>
     <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]} accessibilityViewIsModal onAccessibilityEscape={close}>
-      <ModalSurface radius={0} />
+      <ModalSurface solid radius={0} />
         <View style={styles.header}>
           <View style={styles.search}>
             <Ionicons name="search" size={22} color={colors.textSecondary} accessible={false} />
-            <TextInput ref={input} value={query} onChangeText={changeQuery} placeholder="Search anything…" placeholderTextColor={colors.textSecondary}
+            <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} ref={input} value={query} onChangeText={changeQuery} placeholder="Search anything…" placeholderTextColor={colors.textSecondary}
               accessibilityLabel="Search rooms, playlists, songs and profiles" autoCapitalize="none" autoCorrect={false} returnKeyType="search" style={styles.input} />
             {query.length > 0 && <Pressable onPress={() => { changeQuery(''); input.current?.focus(); }} accessibilityRole="button" accessibilityLabel="Clear search" style={styles.iconButton}>
               <Ionicons name="close-circle" size={20} color={colors.textSecondary} accessible={false} />
@@ -134,7 +141,7 @@ export default function SearchModal({ visible, onClose }: { visible: boolean; on
   </Modal>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: 'transparent' },
   content: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },

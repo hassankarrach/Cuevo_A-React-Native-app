@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState, type ComponentProps } from 'react';
@@ -6,14 +8,17 @@ import { useBilling } from '../../state/BillingContext';
 import PaymentMethodList from '../subscriptions/PaymentMethodList';
 import PrimaryButton from '../../components/PrimaryButton';
 import { useSettings, type PrivacySettings, type Visibility } from '../../state/SettingsContext';
-import { colors } from '../../theme/colors';
 import { showToast } from '../../utils/toast';
 import ChangePasswordForm from './ChangePasswordForm';
+import LinkedAccountsForm from './LinkedAccountsForm';
 import UtilityPage from './UtilityPage';
-import { settingsStyles as styles } from './settingsStyles';
+import { settingsStyles as baseStyles } from './settingsStyles';
 
 type Panel = 'password' | 'privacy' | 'accounts' | 'server' | 'payment';
 export default function SettingsScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const { privacy, savePrivacy, serverAddress, saveServerAddress } = useSettings();
   const { methods } = useBilling();
   const [panel, setPanel] = useState<Panel | null>(null);
@@ -50,11 +55,8 @@ export default function SettingsScreen() {
       {row('Change password', 'Update your account password', 'lock-closed', () => toggle('password'), panel === 'password')}
       {panel === 'password' && <ChangePasswordForm />}
       <View style={styles.divider} />
-      {row('Linked accounts', 'Google and Facebook sign-in', 'link', () => toggle('accounts'), panel === 'accounts')}
-      {panel === 'accounts' && <View style={styles.form}>
-        <View style={styles.row}><Ionicons name="logo-google" size={22} color={colors.text} /><Text style={[styles.heading, styles.rowCopy]}>Google</Text><Text style={styles.note}>Not connected</Text></View>
-        <View style={styles.row}><Ionicons name="logo-facebook" size={22} color={colors.text} /><Text style={[styles.heading, styles.rowCopy]}>Facebook</Text><Text style={styles.note}>Not connected</Text></View>
-      </View>}
+      {row('Linked accounts', 'Manage Google sign-in', 'link', () => toggle('accounts'), panel === 'accounts')}
+      {panel === 'accounts' && <LinkedAccountsForm />}
     </View></View>
     <View style={styles.section}><Text style={styles.sectionLabel}>BILLING</Text><View style={styles.card}>
       {row('Cuevo Plus', 'Explore your upgrade · 99 DH', 'sparkles', () => router.push('/subscription'))}
@@ -74,7 +76,7 @@ export default function SettingsScreen() {
     </View></View>
     <View style={styles.section}><Text style={styles.sectionLabel}>CONNECTION</Text><View style={styles.card}>
       {row('Server address', serverAddress || 'Configure the backend address', 'server', () => toggle('server'), panel === 'server')}
-      {panel === 'server' && <View style={styles.form}><Text style={styles.note}>Enter the server URL supplied for your environment.</Text><TextInput value={address} onChangeText={text => { setAddress(text); setError(''); }} placeholder="https://api.example.com" accessibilityLabel="Server address" keyboardType="url" autoCapitalize="none" autoCorrect={false} style={styles.input} selectionColor={colors.primary} />{!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}<PrimaryButton label="Save address" onPress={saveAddress} /></View>}
+      {panel === 'server' && <View style={styles.form}><Text style={styles.note}>Enter the server URL supplied for your environment.</Text><TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={address} onChangeText={text => { setAddress(text); setError(''); }} placeholder="https://api.example.com" accessibilityLabel="Server address" keyboardType="url" autoCapitalize="none" autoCorrect={false} style={styles.input} selectionColor={colors.primary} />{!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}<PrimaryButton label="Save address" onPress={saveAddress} /></View>}
     </View></View>
   </UtilityPage>;
 }

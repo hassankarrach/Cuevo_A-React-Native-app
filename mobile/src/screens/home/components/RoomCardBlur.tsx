@@ -1,9 +1,12 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useId } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Defs, FeGaussianBlur, Filter, LinearGradient, Path, Stop } from 'react-native-svg';
 
 /** A blurred ribbon of color, rendered behind the card's sharp content. */
 export default function RoomCardBlur({ colors }: { colors: readonly [string, string, string] }) {
+  const styles = useThemedStyles(baseStyles);
+
   const id = useId().replace(/:/g, '');
   const gradient = `roomTint${id}`;
   const blur = `roomBlur${id}`;
@@ -32,6 +35,6 @@ export default function RoomCardBlur({ colors }: { colors: readonly [string, str
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   background: { ...StyleSheet.absoluteFill, overflow: 'hidden', borderBottomLeftRadius: 22, borderBottomRightRadius: 22 },
 });

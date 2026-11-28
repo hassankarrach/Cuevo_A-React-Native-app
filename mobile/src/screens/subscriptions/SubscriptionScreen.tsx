@@ -1,14 +1,31 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Defs, FeGaussianBlur, Filter, G, Path } from 'react-native-svg';
+import SubscriptionBackground from './SubscriptionBackground';
 
 import { useBilling } from '../../state/BillingContext';
 import PrimaryButton from '../../components/PrimaryButton';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
+
+// Illustration controls — save this file to see changes with Fast Refresh.
+const illustrationLayout = {
+  scale: 1.3,       // 1 = current size; 1.2 = 20% larger
+  x: 0,           // positive moves right; negative moves left
+  y: 80,           // positive moves down; negative moves up
+  rotation: 0,    // degrees, clockwise
+  overlap: 64,    // how far the headline tucks beneath the illustration
+};
+
+// Headline controls — independent of the illustration and other content.
+const headlineLayout = {
+  x: 0,       // positive moves right; negative moves left
+  y: -160,     // negative moves up; positive moves down
+  scale: 1,   // size multiplier
+};
 
 const benefits = [
   { icon: 'albums' as const, label: 'More space for your playlists' },
@@ -16,52 +33,54 @@ const benefits = [
   { icon: 'people' as const, label: 'All the ways you already collaborate' },
 ];
 
-function SubscriptionBackground() {
-  return <View pointerEvents="none" accessible={false} style={styles.background}>
-    <Svg width="100%" height="100%" viewBox="0 0 400 780" preserveAspectRatio="none">
-      <Defs>
-        <Filter id="subscriptionClouds" x="-100%" y="-100%" width="300%" height="300%">
-          <FeGaussianBlur stdDeviation="30" />
-        </Filter>
-      </Defs>
-      <G filter="url(#subscriptionClouds)" fill="none" strokeLinecap="round">
-        <Path d="M-35 320 C-14 210 -40 72 35 12 C70 -15 130 -15 162 -32" stroke="#FF8B4D" strokeWidth="90" opacity="0.65" />
-        <Path d="M-30 170 C-40 70 -10 5 65 -18" stroke="#FFD576" strokeWidth="58" opacity="0.9" />
-        <Path d="M432 260 C375 360 445 440 395 536 C365 597 327 622 251 642" stroke="#FF784D" strokeWidth="83" opacity="0.65" />
-        <Path d="M440 480 C414 572 400 629 303 653" stroke="#FFD26D" strokeWidth="65" opacity="0.8" />
-        <Path d="M-25 603 C34 646 71 622 121 655" stroke="#FFC5AA" strokeWidth="70" opacity="0.6" />
-      </G>
-    </Svg>
-  </View>;
-}
-
 export default function SubscriptionScreen() {
+  const styles = useThemedStyles(baseStyles);
+
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const artworkSize = Math.min(width - 44, height * 0.26);
   const { selectedMethod } = useBilling();
   return <View style={styles.screen}>
-    <StatusBar style="dark" />
+    <StatusBar style="light" />
+    <SubscriptionBackground />
     <View style={styles.hero}>
-      <SubscriptionBackground />
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.heroSafe}>
         <View style={styles.closeRow}>
-          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/settings')} accessibilityRole="button" accessibilityLabel="Close Cuevo Plus" style={styles.close}>
-            <Ionicons name="close" size={25} color={colors.text} accessible={false} />
-          </Pressable>
-        </View>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.heroContent}>
           <View style={styles.badge}>
             <Ionicons name="sparkles" size={14} color={colors.primary} accessible={false} />
             <Text style={styles.badgeLabel}>Cuevo Plus</Text>
           </View>
-          <Text accessibilityRole="header" style={styles.headline}>More music.{'\n'}<Text style={styles.headlineAccent}>More together.</Text></Text>
-          <Text style={styles.description}>A little more room for the music{'\n'}and the people you love.</Text>
+
+          <Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/settings')} accessibilityRole="button" accessibilityLabel="Close Cuevo Plus" style={styles.close}>
+            <Ionicons name="close" size={25} color="#FFFFFF" accessible={false} />
+          </Pressable>
+        </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.heroContent}>
+          <Image source={require('../../../assets/illustrations/cuevo-plus-reaching.png')} accessible={false} resizeMode="contain" style={[styles.illustration, {
+            width: artworkSize,
+            height: artworkSize,
+            marginBottom: -illustrationLayout.overlap,
+            transform: [
+              { translateX: illustrationLayout.x },
+              { translateY: illustrationLayout.y },
+              { rotate: `${illustrationLayout.rotation}deg` },
+              { scale: illustrationLayout.scale },
+            ],
+          }]} />
+          <Text accessibilityRole="header" style={[styles.headline, {
+            transform: [
+              { translateX: headlineLayout.x },
+              { translateY: headlineLayout.y },
+              { scale: headlineLayout.scale },
+            ],
+          }]}>More music.{'\n'}<Text style={styles.headlineAccent}>More together.</Text></Text>
           <View style={styles.benefits}>
             {benefits.map(benefit => <View key={benefit.icon} style={styles.benefit}>
               <Ionicons name={benefit.icon} size={18} color={colors.primary} accessible={false} />
               <Text style={styles.benefitLabel}>{benefit.label}</Text>
             </View>)}
           </View>
-          <View style={styles.included}><Ionicons name="checkmark-circle" size={16} color="#9A6147" accessible={false} /><Text style={styles.includedLabel}>Everything in Free, with room for more.</Text></View>
+          <View style={styles.included}><Ionicons name="checkmark-circle" size={16} color="#FFD2B5" accessible={false} /><Text style={styles.includedLabel}>Everything in Free, with room for more.</Text></View>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -74,25 +93,24 @@ export default function SubscriptionScreen() {
   </View>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFCF8' },
   hero: { flex: 1, minHeight: 0, overflow: 'hidden' },
-  background: { ...StyleSheet.absoluteFill, backgroundColor: '#FFFCF8' },
   heroSafe: { flex: 1 },
-  closeRow: { alignItems: 'flex-end', paddingHorizontal: 16, paddingTop: 4 },
-  close: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  heroContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 22, paddingTop: 18, paddingBottom: 36 },
+  closeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 48, paddingHorizontal: 16, paddingTop: 4 },
+  close: { position: 'absolute', right: 16, top: 4, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  heroContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-start', paddingHorizontal: 22, paddingTop: 0, paddingBottom: 36 },
+  illustration: { zIndex: 3 },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.85)', borderWidth: 1, borderColor: '#FFE1CE' },
   badgeLabel: { fontFamily: fonts.semibold, fontSize: 12, color: colors.text },
-  headline: { fontFamily: fonts.bold, fontSize: 38, lineHeight: 46, letterSpacing: -1.5, color: colors.text, textAlign: 'center', marginTop: 24 },
-  headlineAccent: { color: colors.primary },
-  description: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 22, color: colors.textSecondary, textAlign: 'center', marginTop: 16 },
-  benefits: { alignItems: 'center', gap: 12, marginTop: 30, width: '100%' },
-  benefit: { flexDirection: 'row', alignItems: 'center', gap: 9, maxWidth: '100%', minHeight: 42, paddingHorizontal: 15, paddingVertical: 9, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)' },
-  benefitLabel: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 12, lineHeight: 18, color: colors.text },
-  included: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 24 },
-  includedLabel: { flexShrink: 1, fontFamily: fonts.regular, fontSize: 11, lineHeight: 17, color: '#9A6147' },
-  footer: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingTop: 25, borderWidth: 1, borderColor: '#F3E8DD' },
+  headline: { zIndex: 2, fontFamily: fonts.bold, fontSize: 38, lineHeight: 46, letterSpacing: -1.5, color: '#FFFFFF', textAlign: 'center', marginTop: 0 },
+  headlineAccent: { color: '#FFD2B5' },
+  benefits: { alignItems: 'stretch', gap: 8, marginTop: 'auto', paddingTop: 18, width: '100%' },
+  benefit: { flexDirection: 'row', alignItems: 'center', gap: 9, width: '100%', minHeight: 42, paddingHorizontal: 15, paddingVertical: 9, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.74)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.95)' },
+  benefitLabel: { flex: 1, textAlign: 'left', fontFamily: fonts.medium, fontSize: 12, lineHeight: 18, color: colors.text },
+  included: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 16 },
+  includedLabel: { flexShrink: 1, fontFamily: fonts.regular, fontSize: 11, lineHeight: 17, color: '#FFD2B5' },
+  footer: { backgroundColor: 'rgba(255,255,255,0.94)', borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingTop: 25, borderWidth: 1, borderColor: '#F3E8DD' },
   planBadge: { alignSelf: 'center', marginTop: -39, backgroundColor: '#FFF1E5', borderWidth: 1, borderColor: '#FFE0C6', paddingHorizontal: 15, paddingVertical: 8, borderRadius: 14 },
   planBadgeLabel: { fontFamily: fonts.semibold, fontSize: 9, letterSpacing: 1.2, color: '#A35D39' },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'center', gap: 6, marginTop: 18 },

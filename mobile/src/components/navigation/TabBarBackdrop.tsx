@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import NativeMaskedView from '@react-native-masked-view/masked-view';
 import { BlurView } from 'expo-blur';
 import type { ComponentRef, ComponentType, ReactElement, RefObject } from 'react';
@@ -9,17 +11,21 @@ const MaskedView = NativeMaskedView as unknown as ComponentType<ViewProps & { ma
 type TabBarBackdropProps = { height: number; placement?: 'top' | 'bottom'; top?: number; blur?: boolean; blurTarget: RefObject<ComponentRef<typeof View> | null> };
 
 export default function TabBarBackdrop({ height, blurTarget, placement = 'bottom', top = 0, blur = true }: TabBarBackdropProps) {
+  const styles = useThemedStyles(baseStyles);
+
+  const colors = useAppColors();
+  if (colors.dark) return null;
   return (
     <View pointerEvents="none" accessible={false} style={[styles.backdrop, { height }, placement === 'top' ? { top } : { bottom: 0 }]}>
       {blur && <MaskedView style={StyleSheet.absoluteFill} maskElement={<View style={[styles.mask, placement === 'top' && styles.topMask]} />}>
-        <BlurView blurTarget={blurTarget} blurMethod="dimezisBlurViewSdk31Plus" intensity={30} tint="light" style={StyleSheet.absoluteFill} />
+        <BlurView blurTarget={blurTarget} blurMethod="dimezisBlurViewSdk31Plus" intensity={30} tint={colors.dark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
       </MaskedView>}
       <View style={[styles.warmFade, placement === 'top' && styles.topFade]} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: { position: 'absolute', left: 0, right: 0 },
   topMask: { backgroundImage: 'linear-gradient(to bottom, black 0%, black 25%, rgba(0,0,0,0.3) 70%, transparent 100%)' },
   topFade: { backgroundImage: 'linear-gradient(to bottom, rgba(255,252,248,0.8) 0%, rgba(255,252,248,0.3) 55%, rgba(255,252,248,0) 100%)' },

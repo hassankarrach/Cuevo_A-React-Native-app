@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useBilling } from '../../state/BillingContext';
@@ -6,6 +8,9 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 
 export default function PaymentMethodList({ removable = false }: { removable?: boolean }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const { methods, selectedId, selectMethod, removeMethod } = useBilling();
   return <View style={styles.list}>
     {methods.length === 0 && <Text style={styles.note}>No payment methods added yet.</Text>}
@@ -26,7 +31,7 @@ export default function PaymentMethodList({ removable = false }: { removable?: b
     })}
   </View>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   list: { gap: 10 },
   card: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#EEE5DB', borderRadius: 18, backgroundColor: '#FFFFFF' },
   selected: { borderColor: '#FFB493', backgroundColor: '#FFF5ED' },

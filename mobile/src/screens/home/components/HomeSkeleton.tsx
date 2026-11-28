@@ -1,11 +1,14 @@
+import { useAppColors, type AppColors } from '../../../theme/useAppColors';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { PlaylistCardSkeleton, RoomCardSkeleton, SkeletonPulse } from '../../../components/skeletons/CardSkeletons';
 
 function SectionHeading() {
+  const styles = makeStyles(useAppColors());
   return <View style={styles.heading}><View style={styles.headingBone} /><View style={styles.linkBone} /></View>;
 }
 
 export default function HomeSkeleton() {
+  const styles = makeStyles(useAppColors());
   return <SkeletonPulse>
     <View style={styles.section}>
       <SectionHeading />
@@ -19,11 +22,11 @@ export default function HomeSkeleton() {
     </View>
   </SkeletonPulse>;
 }
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   section: { marginTop: 24, gap: 8 },
   heading: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  headingBone: { width: 100, height: 21, borderRadius: 6, backgroundColor: '#DED8D1' },
-  linkBone: { width: 46, height: 12, borderRadius: 5, backgroundColor: '#DED8D1' },
+  headingBone: { width: 100, height: 21, borderRadius: 6, backgroundColor: colors.skeleton },
+  linkBone: { width: 46, height: 12, borderRadius: 5, backgroundColor: colors.skeleton },
   carousel: { marginHorizontal: -20 },
   rooms: { gap: 12, paddingHorizontal: 20, paddingVertical: 4 },
   playlists: { gap: 12 },

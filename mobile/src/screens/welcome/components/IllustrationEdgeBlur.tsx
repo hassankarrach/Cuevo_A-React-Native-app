@@ -9,7 +9,7 @@ const MaskedView = NativeMaskedView as unknown as ComponentType<
   ViewProps & { maskElement: ReactElement }
 >;
 
-export default function IllustrationEdgeBlur() {
+export default function IllustrationEdgeBlur({ dark = false }: { dark?: boolean }) {
   if (Platform.OS !== 'ios') return null;
 
   return (
@@ -18,7 +18,7 @@ export default function IllustrationEdgeBlur() {
       style={StyleSheet.absoluteFill}
       maskElement={<View style={styles.edgeMask} />}
     >
-      <BlurView intensity={35} tint="light" style={StyleSheet.absoluteFill} />
+      <BlurView intensity={35} tint={dark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
     </MaskedView>
   );
 }

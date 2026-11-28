@@ -1,9 +1,9 @@
 import ModalSurface from '../../components/ModalSurface';
-import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Animated, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import AppToast from '../../components/AppToast';
+import { ToastViewport } from '../../components/AppToast';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import LoginDecoration from '../login/components/LoginDecoration';
@@ -12,41 +12,60 @@ type AuthModalProps = {
   visible: boolean;
   title: string;
   progress?: number;
+  scrollEnabled?: boolean;
   children: ReactNode;
   onBack?: () => void;
   onClose: () => void;
 };
 
-export default function AuthModal({ visible, title, children, progress, onClose, onBack = onClose }: AuthModalProps) {
+export default function AuthModal({ visible, title, children, progress, scrollEnabled = true, onClose, onBack = onClose }: AuthModalProps) {
   const insets = useSafeAreaInsets();
+  const [slide] = useState(() => new Animated.Value(1000));
+
+  useEffect(() => {
+    if (!visible) {
+      slide.setValue(1000);
+      return;
+    }
+    const animation = Animated.timing(slide, { toValue: 0, duration: 300, useNativeDriver: true });
+    animation.start();
+    return () => animation.stop();
+  }, [visible, slide]);
+
+  useEffect(() => {
+    if (!visible) return;
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => back.remove();
+  }, [visible, onClose]);
+
+  if (!visible) return null;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
+    <View style={styles.overlay} accessibilityViewIsModal>
+      <ToastViewport>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           accessibilityRole="button"
           accessibilityLabel="Dismiss account setup"
         />
-        <View
+        <Animated.View
           style={[
-            styles.sheet,
+            styles.sheetFrame,
+            { transform: [{ translateY: slide }] },
             {
-              // Safe-area top + the 56px wordmark row + a small gap.
+              // Preserve the original sheet size and position.
               marginTop: insets.top + 56 + 12,
-              paddingBottom: Math.max(insets.bottom, 20),
             },
           ]}
           accessibilityViewIsModal
           onAccessibilityEscape={onClose}
         >
-          <ModalSurface radius={32} topOnly />
+          <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+          <ModalSurface radius={36} topOnly />
           <LoginDecoration />
           <View style={styles.header}>
             <Pressable
@@ -68,28 +87,36 @@ export default function AuthModal({ visible, title, children, progress, onClose,
             </View>
           )}
           <KeyboardAvoidingView style={styles.body} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={insets.top + 68}>
-            <ScrollView style={styles.formScroll} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}>
+            <ScrollView scrollEnabled={scrollEnabled} bounces={scrollEnabled} style={styles.formScroll} contentContainerStyle={styles.formContent} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}>
               {children}
             </ScrollView>
           </KeyboardAvoidingView>
-        </View>
-        {visible && <AppToast />}
-      </View>
-    </Modal>
+          </View>
+        </Animated.View>
+      </ToastViewport>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
+    zIndex: 10,
     justifyContent: 'flex-end',
     backgroundColor: 'transparent',
+  },
+  sheetFrame: {
+    flex: 1,
+    borderTopLeftRadius: 36,
+    backgroundColor: '#FFFCF8',
+    borderTopWidth: 1,
+    borderTopColor: '#ECEDEF',
   },
   sheet: {
     flex: 1,
     backgroundColor: 'transparent',
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: 36,
+    borderTopRightRadius: 36,
     overflow: 'hidden',
     paddingTop: 12,
     paddingHorizontal: 16,

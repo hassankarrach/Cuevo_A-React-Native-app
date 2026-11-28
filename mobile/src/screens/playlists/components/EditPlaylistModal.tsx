@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
+import { useAppColors } from '../../../theme/useAppColors';
 import ModalSurface from '../../../components/ModalSurface';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
@@ -9,6 +11,9 @@ import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 
 export default function EditPlaylistModal({ playlist, onClose, onSave }: { playlist: Playlist; onClose: () => void; onSave: (details: PlaylistDetails) => void }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   const [name, setName] = useState(playlist.name);
   const [description, setDescription] = useState(playlist.description);
@@ -33,10 +38,10 @@ export default function EditPlaylistModal({ playlist, onClose, onSave }: { playl
         <View style={styles.header}><Text accessibilityRole="header" style={styles.title}>Edit playlist</Text><Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close playlist editor" style={styles.close}><Ionicons name="close" size={24} color={colors.textSecondary} /></Pressable></View>
         <ScrollView style={styles.formScroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={styles.form}>
           <Text style={styles.label}>Playlist name</Text>
-          <TextInput value={name} onChangeText={text => { setName(text); setError(''); }} maxLength={60} accessibilityLabel="Playlist name" placeholder="Give it a name" placeholderTextColor="#A19892" style={styles.input} selectionColor={colors.primary} />
+          <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={name} onChangeText={text => { setName(text); setError(''); }} maxLength={60} accessibilityLabel="Playlist name" placeholder="Give it a name" placeholderTextColor={colors.textSecondary} style={styles.input} selectionColor={colors.primary} />
           {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
           <Text style={styles.label}>Description</Text>
-          <TextInput value={description} onChangeText={setDescription} maxLength={300} multiline accessibilityLabel="Playlist description" placeholder="What’s this playlist about?" placeholderTextColor="#A19892" style={[styles.input, styles.description]} selectionColor={colors.primary} />
+          <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={description} onChangeText={setDescription} maxLength={300} multiline accessibilityLabel="Playlist description" placeholder="What’s this playlist about?" placeholderTextColor={colors.textSecondary} style={[styles.input, styles.description]} selectionColor={colors.primary} />
           <Text style={styles.label}>Visibility</Text>
           <View accessibilityRole="radiogroup">
             {option('Public', !isPrivate, () => setPrivate(false), 'Anyone can discover this playlist.')}
@@ -54,7 +59,7 @@ export default function EditPlaylistModal({ playlist, onClose, onSave }: { playl
     </KeyboardAvoidingView>
   </Modal>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, backgroundColor: 'rgba(35,27,24,0.3)' },
   sheet: { width: '100%', maxWidth: 440, alignSelf: 'center', maxHeight: '90%', borderRadius: 28, padding: 20, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },

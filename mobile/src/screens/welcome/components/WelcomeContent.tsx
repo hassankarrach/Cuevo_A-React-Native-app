@@ -2,39 +2,43 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
-import WelcomePrimaryButton from './WelcomePrimaryButton';
 
 type WelcomeContentProps = {
-  onGetStarted: () => void;
+  dark?: boolean;
   onLoginPress: () => void;
 };
 
-export default function WelcomeContent({ onLoginPress, onGetStarted }: WelcomeContentProps) {
+export default function WelcomeContent({ dark = false }: { dark?: boolean }) {
   return (
     <View style={styles.container}>
       <View style={styles.copy}>
-        <Text style={styles.headline}>Your music.{'\n'}Better together.</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.headline, dark && { color: '#FFF5EB' }]}>Your music.{'\n'}Better together.</Text>
+        <Text style={[styles.subtitle, dark && { color: '#BEB3AF' }]}>
           Build shared playlists and vote for what plays next.
         </Text>
       </View>
+
+    </View>
+  );
+}
+
+export function WelcomeLogin({ onLoginPress, dark = false }: WelcomeContentProps) {
+  return (
       <View style={styles.actions}>
-        <WelcomePrimaryButton onPress={onGetStarted} />
         <Pressable onPress={onLoginPress} accessibilityRole="button" style={styles.loginButton}>
-          <Text style={styles.loginText}>
-            Already have an account? <Text style={styles.loginLabel}>Log in</Text>
+          <Text style={[styles.loginText, dark && { color: '#BEB3AF' }]}>
+            Already have an account? <Text style={[styles.loginLabel, dark && { color: '#FFF5EB' }]}>Log in</Text>
           </Text>
         </Pressable>
       </View>
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 28,
-    paddingBottom: 8,
-    gap: 16,
+    paddingTop: 20,
+    gap: 4,
   },
   copy: {
     alignItems: 'center',

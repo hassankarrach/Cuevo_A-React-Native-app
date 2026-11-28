@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../theme/useThemedStyles';
+import { useAppColors } from '../theme/useAppColors';
 import Svg, { Path } from 'react-native-svg';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../theme/colors';
@@ -8,6 +10,9 @@ const verifiedSeal = 'M50.00 2.00 C55.10 2.00 59.65 10.70 65.31 13.04 C70.96 15.
 export type AccountStatus = { verified?: boolean; subscriptionActive?: boolean };
 
 export default function AccountBadges({ verified, subscriptionActive, size = 18 }: AccountStatus & { size?: number }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   if (!verified && !subscriptionActive) return null;
   return <View style={styles.badges}>
     {verified && <View accessible accessibilityLabel="Verified" style={{ width: size, height: size }}>
@@ -23,7 +28,7 @@ export default function AccountBadges({ verified, subscriptionActive, size = 18 
   </View>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   badges: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
   plus: { flexDirection: 'row', gap: 3, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5, paddingVertical: 1, backgroundColor: colors.primary, borderWidth: 1, borderColor: colors.primary },
   plusLabel: { fontFamily: fonts.bold, letterSpacing: 0.5, color: '#FFFFFF' },

@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
@@ -10,6 +12,9 @@ import { fonts } from '../../theme/fonts';
 import UtilityPage from '../settings/UtilityPage';
 
 export default function SongScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const song = getSong(id);
   const { playlists } = usePlaylists();
@@ -60,7 +65,7 @@ export default function SongScreen() {
   </UtilityPage>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   cover: { width: '100%', maxWidth: 340, aspectRatio: 1, alignSelf: 'center', borderRadius: 24 },
   details: { gap: 8 },
   title: { fontFamily: fonts.bold, fontSize: 27, lineHeight: 34, color: colors.text },

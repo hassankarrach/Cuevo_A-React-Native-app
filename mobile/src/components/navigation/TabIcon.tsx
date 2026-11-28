@@ -1,11 +1,15 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 
-import { colors } from '../../theme/colors';
+import { useAppColors } from '../../theme/useAppColors';
 
 type TabIconProps = { name: 'home' | 'rooms' | 'playlists'; selected: boolean };
 
 export default function TabIcon({ name, selected }: TabIconProps) {
+  const styles = useThemedStyles(baseStyles);
+
+  const colors = useAppColors();
   const color = selected ? colors.text : '#928B86';
   return (
     <View accessible={false} style={styles.icon}>
@@ -14,4 +18,4 @@ export default function TabIcon({ name, selected }: TabIconProps) {
   );
 }
 
-const styles = StyleSheet.create({ icon: { width: 25, height: 30, alignItems: 'center', justifyContent: 'center' } });
+const baseStyles = StyleSheet.create({ icon: { width: 25, height: 30, alignItems: 'center', justifyContent: 'center' } });

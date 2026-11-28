@@ -12,6 +12,20 @@
 
 ## How we work
 
+- Settings password change (2026-11-27): the form awaits PUT /me/password through the session manager. Password and Google link/unlink mutations share credential rotation handling, which replaces secure tokens before later queued requests can run. A rejected current password preserves the session; a lost response drops potentially stale credentials instead of replaying them. Password fields clear only on confirmed success, and errors keep the form open.
+
+- Password recovery (2026-11-27): Forgot Password and Reset Password now call the server. Request responses intentionally reveal no account or expiry details; the client only checks six-digit format and lets the backend validate the actual code/expiry. Resend uses the same request endpoint, a wall-clock 30-second cooldown, and server Retry-After overrides. Pending refs prevent double submissions, and cleanup prevents state updates after leaving. Password/code values stay in component memory and are cleared on success.
+
+- Google native authentication (2026-11-27): Google provides a short-lived ID token; the client sends it to Cuevo, which verifies identity and returns its own session. Only Cuevo credentials go into secure storage. Native Google Sign-In loads on demand on iOS, keeping Expo Go usable for email login. The config plugin registers the reversed iOS client ID as a callback URL scheme; native modules require rebuilding the app. Linked-account changes rotate Cuevo tokens, so they share the session queue and discard old durable credentials before requesting rotation. Explicit backend errors preserve the session when safe; ambiguous responses require signing in again.
+
+- Notification summary revision (2026-11-27): cards now use one concise actor/action title instead of a generic title plus description. The white type icon overlays the avatar's top-right corner in an orange-to-peach diagonal gradient badge. Accept uses orange with white text; reject stays transparent with a light gray outline and bold cross. Actions remain below the title.
+
+- Notification layout revision (2026-11-27): title and timestamp share the top row, message uses the full text width, and separate actions sit below. Removed card borders. Accept is a compact text button; reject is a thick, rounded SVG cross with no enclosing shape or background. Existing `react-native-svg` draws the icon with rounded stroke caps; no new package needed.
+
+- Profile setup persistence (2026-11-27): Continue now awaits profile PATCH, optional raw JPEG upload/delete, then explicit onboarding completion. A React ref prevents duplicate submissions; disabled fields keep the draft stable while saving. The image picker returns JPEG base64, which the API adapter converts to raw bytes (not JSON or a device file path). Authenticated avatar reads become in-memory data URLs; session completion updates secure session storage. Profile reads restore saved setup on reopening. The separate Edit Profile screen still has local-only saves.
+
+- Verification resend (2026-11-27): `VerifyEmailForm` keeps the current server challenge in React state, replacing its ID and expiry after resend. A cleaned-up interval updates the cooldown label; React Native `Pressable` supplies the disabled resend action, like a disabled button on the web. Verification and resend share a pending guard to prevent overlapping requests. Server `Retry-After` controls additional waiting.
+
 - Do not put Preview, Mock, session-only or development-status disclaimers in user-facing UI or accessibility labels. Keep implementation limitations in developer documentation and task reports.
 
 - The goal is to build a cool UI for the running Expo app while learning React Native.
@@ -819,3 +833,529 @@ Home video overlay revised by user: bright brand-orange wash at 76% plus peach/t
 
 - Both pages now show their matching card skeletons on initial mount and after every search input change, including clearing the input. Static titles, search fields and room filter controls remain visible and usable. Results and empty states appear only after the two-second delay.
 - Shared useSimulatedSearch tracks each query change with a revision, so typing back to an earlier query still restarts loading. Effect cleanup cancels superseded/unmounted timers. Room placeholders follow the existing two-column grid; playlist placeholders follow the existing row spacing. Existing sorting, genre filtering and result navigation remain intact.
+
+## Welcome flowing wordmark — 2026-11-21
+
+- WelcomeBrand now renders the approved connected orange cuevo wordmark instead of the separate symbol and text. The original generated PNG is preserved as assets/brand/cuevo-flow-wordmark.png.
+- A centered 64-point View clips only the image's transparent margins; the Image uses contain to retain its proportions. An 18-point top margin moves the brand slightly lower inside the safe area, like margin-top on the web.
+
+- WelcomeBrand exposes LOGO_WIDTH, LOGO_TOP and X/Y offsets at the top for visual tuning. Width preserves the image aspect ratio; transforms move the artwork without changing sibling layout. Removed clipping to keep larger/offset artwork visible.
+
+- Final logo tuning is inlined: width 200, top margin 40, proportional image/frame heights. WelcomeScreen styles.animation.transform translateY moves only the Lottie line/notes layer independently of the characters and logo; set to 12 to lower it. No tuning variables remain.
+
+- WelcomeCharacters blends a sharp image and a blurRadius={12} copy using complementary vertical masks from 50% to 78% of the image height. The existing outer alpha fade stays in place, so the lower bodies soften into the background while faces stay sharp. This is a render-time effect; the source PNG is unchanged.
+
+## Offline playlists — step 1: database opener
+
+- Added `expo-sqlite` using Expo's SDK-compatible installer.
+- `mobile/src/storage/database.ts` exports `openPlaylistDatabase()`. Calling it opens or creates `cuevo-playlists.db` in the app's private storage. SQLite runs on the device; no backend is involved.
+- `async` / `await` lets JavaScript wait for the native storage operation without blocking the UI thread. The function returns a Promise containing the database connection.
+- This step only defines the opener: no screen calls it yet, no database table exists, and playlists still live in React state. Next lesson: create the first table.
+
+## Offline playlists — step 2: cache table
+
+- `src/storage/database.ts` now awaits `execAsync()` to create `cached_playlists` before returning the database connection. `CREATE TABLE IF NOT EXISTS` preserves existing data on later opens.
+- Each row stores `account_id`, `playlist_id`, a JSON playlist snapshot, an optional server revision, and a local cache timestamp. The composite primary key allows the same playlist to be cached separately for different accounts.
+- `TEXT` stores strings; `NOT NULL` requires a value. `server_revision` can be null while only fixtures exist. `cached_at` means saved locally, not verified server synchronization.
+- JSON keeps this first snapshot table small; later functions will serialize/validate snapshots. Song metadata and artwork caching still need implementation. No screen calls the opener and no rows are saved yet.
+
+## Offline playlists — step 3: save one snapshot
+
+- Added `src/storage/playlistCache.ts` with `savePlaylist(accountId, playlist, serverRevision = null)`. It serializes the playlist using `JSON.stringify`, records an ISO cache timestamp, and awaits a SQLite write. Empty account IDs are rejected.
+- `runAsync` binds values into `?` placeholders instead of interpolating user data into SQL. `ON CONFLICT ... DO UPDATE` refreshes an existing account/playlist row without creating duplicates; `excluded` refers to the incoming row.
+- Revisions stay null for fixture data. This function saves snapshots only; it does not queue offline edits, download artwork, or save separate song metadata. No screen invokes it yet. Next: read a saved playlist back.
+
+## Offline playlists — step 4: read one snapshot
+
+- Added `getCachedPlaylist(accountId, playlistId)` in `src/storage/playlistCache.ts`. A parameterized SELECT filters by both account and playlist, returning the playlist with its revision/cache timestamp, or null if missing/invalid.
+- `JSON.parse` reverses `JSON.stringify`. Its result is treated as unknown and checked by `isPlaylist` before use: TypeScript types alone cannot validate stored data at runtime. Malformed JSON or mismatched playlist IDs return null; database errors still propagate for later UI handling.
+- `CachedPlaylistRow` describes SQLite's returned columns, while the public result uses camelCase. No screens call the cache yet. Next: connect saving/reading incrementally to the playlist flow.
+
+## Offline playlists — simplicity preference
+
+- User explicitly wants a school-project scope: keep code straightforward and avoid speculative abstractions or defensive checks. Preserve the checks needed for the required offline collaboration behavior.
+- Removed `isPlaylist` and `isStringArray` from `playlistCache.ts`. We read our own saved JSON as `Playlist`, retaining the parse-error fallback. The earlier step-4 runtime-validation description is superseded by this simplification.
+
+## Offline playlists — step 5: save from the screen
+
+- `PlaylistScreen.tsx` imports `savePlaylist` and calls it in a `useEffect` before the early unavailable return. Hooks must run in the same order on every render.
+- The `[playlist]` dependency saves on mount and whenever that playlist object changes, including current local edits. Opening the screen now invokes the database/table creation and snapshot write. `self` is the current fixture account ID, to be replaced during authentication integration.
+- A failed write shows an error toast. This is a local snapshot, not a confirmed server state or a durable synchronization queue. Reading/restoring the cache and network behavior remain unwired; do not claim offline restart support yet.
+- Keep the save effect behind cache hydration when restoring is added, so startup fixture data cannot overwrite an existing saved copy.
+
+## Offline playlists — step 6: restore before saving
+
+- `PlaylistsContext.tsx` adds `restorePlaylist`, replacing the matching playlist in shared React state or inserting a cached one missing from the current list. `useCallback` keeps this function stable for the screen effect's dependency array.
+- `PlaylistScreen.tsx` reads the cache on mount, restores it if present, then marks `cacheStatus` ready. The save effect waits for ready, preventing initial fixtures from overwriting saved data. Loading blocks editing; read errors keep saving blocked and offer back/reopen instructions. A cleanup flag ignores read results after unmount.
+- When no cache exists, the existing fixture is displayed and saved. This remains local snapshot persistence, not backend sync. Newly created playlists are not yet rediscovered in the list after restart unless their detail route is opened; list-wide hydration is a later step. Song details/artwork currently resolve from the bundled catalog.
+
+## Notification permission after onboarding — 2026-11-21
+
+- Installed `expo-notifications` with Expo's SDK-compatible installer and added its config plugin in `mobile/app.json`.
+- Last Introduction action now routes to `/notification-permission`. Route entry is `mobile/src/app/notification-permission.tsx`; implementation is `mobile/src/screens/notifications/NotificationPermissionScreen.tsx`.
+- The screen checks existing OS permission before showing Enable notifications / Later. Already allowed/denied states skip to Home. Web also skips; native notification imports are deferred until needed.
+- Enable creates the Android default channel when applicable, then calls `requestPermissionsAsync` for alerts, badges and sounds. Both Allow and Don't Allow continue to Home; Later continues without requesting. Loading/disabled actions and retryable error text are included.
+- No push token registration, backend delivery, local scheduling or notification-tap navigation is implemented in this step. OS permission is distinct from in-app notification list data.
+- Typecheck/lint pass. Native rendering and the system permission dialog still need device verification. Native config changes require a new standalone/development build; Expo Go permission belongs to the Expo Go host, not an installed Cuevo binary.
+
+## Standalone iOS refresh and branded notification — 2026-11-21
+
+- Selected `assets/brand/cuevo-app-icon-orange-v3.png` as `expo.icon` in `app.json`; preserved earlier designs. Generated native configuration through `npx expo prebuild --platform ios --no-install` and built/installed with `npx expo run:ios --configuration Release --device 158AB8CD-3044-4069-93A6-73D8C9CAC59A --no-bundler`.
+- Build succeeded with zero errors and four warnings. Replaced the existing `com.cuevo.app` on the same iPhone 17 Simulator. No uninstall, device reset or new runtime was needed. Release bundles current JavaScript/assets and works without Metro; future code changes require rebuilding this standalone snapshot.
+- Visually verified current welcome/Home, orange Cuevo home-screen icon and a simulated Plus notification bearing Cuevo's own icon. Simulator push targeted `com.cuevo.app`, not Expo Go. This verifies simulated system presentation, not backend push delivery. Latest lint/typecheck passed before build.
+
+## Nearby searching visual — 2026-11-22
+
+- Added `/nearby` route and `src/screens/nearby/NearbyScreen.tsx`, linked through Rooms → Nearby. Reference-inspired warm peach/orange/yellow radial background and centered translucent gradient orb/glow use native Views, with no generated bitmap or dependency.
+- Native Animated values held in lazy useState drive 4.8-second breathing scale/halo opacity and 18-second gradient rotation. Native driver avoids per-frame React updates. Stop searching / Scan nearby toggles visual state only. Focus cleanup, AppState and Reduce Motion pause animation.
+- Simulator visually verified searching and stopped layouts, rotating color changes and stop/restart controls. Lint/typecheck pass. Real BLE, permission requests, timers/results and room lookup are not implemented by this visual step; no fake hardware status or detections are shown.
+- Expo Go preview: launch `exp://127.0.0.1:8081/--/nearby?__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1` so SDK 58 does not redirect into an older installed standalone snapshot. Metro is running with two workers. Installed Release/APK snapshots need rebuilding for these changes.
+
+## Nearby campus map redesign — 2026-11-22
+
+- Replaced the orb with a pale real OpenStreetMap viewport centered on UM6P Benguerir (32.21864, -7.93605), warm concentric radar rings, a six-second SVG sweep, and a floating status card. No new dependencies. Fixed campus coordinates are not GPS; real room discovery remains unwired.
+- `NearbyMap.tsx` converts coordinates to Web Mercator tile positions, renders only intersecting tiles as native Images, and uses normal HTTP caching plus Cuevo identification on native requests. Visible OpenStreetMap credit is kept above the status card. Tiles need an internet connection; errors show a short connection message.
+- `measureLayout` is like measuring DOM bounds relative to a parent: it aligns the map coordinate with the actual radar center. RN 0.88 refs use `ComponentRef<typeof View>`. SVG draws the wedge while native Animated rotates its wrapper without per-frame React renders. Existing focus/AppState/Reduce Motion cleanup is preserved.
+- MapTiler Static Maps is a researched alternative for custom pale styles; it requires the project owner’s API key. CARTO also now requires a key. No account/key signup was performed.
+- Typecheck and lint pass; simulator screenshot verified the campus tiles, light styling, radar and card. Search controls remain visual only.
+
+## Nearby copy cleanup — 2026-11-22
+
+- Removed the radar campus label, hero slogans, supporting sentences and footer tagline. Kept Nearby rooms, one concise searching/paused status, Stop/Scan, and required map attribution. Removing the intro lets the existing flex center give more space to the map without changing animation behavior.
+
+- Nearby header consistency: matched PaymentScreen’s existing secondary-page header (21px semibold centered title, plain 24px back arrow with a 44px touch target, 20px horizontal/12px vertical padding). Removed the circular back-button surface.
+
+## Nearby mesh gradient — 2026-11-22
+
+- Added three static native radial-gradient Views over the pale map: peach at the upper left, brand orange at the lower right, and cream at the left middle. Broad transparent stops overlap like a soft mesh, leaving streets and radar visible. This uses the existing RN backgroundImage support, like layered CSS radial gradients, with no bitmap, dependency or extra animation.
+
+- Nearby bottom action now reuses the shared `PrimaryButton`, inheriting the orange gradient, 15px corners, 56px minimum height, glow and label typography. Component reuse keeps the screen consistent with future shared button changes.
+
+- Added an optional ReactNode `icon` prop to shared PrimaryButton, like passing JSX into a React web component. Nearby supplies a white close/radio icon for Stop/Scan; existing button callers remain unchanged.
+
+## Nearby discovery panel and simulated results — 2026-11-22
+
+- Unified the status and action into a taller white panel; a negative top margin layers the shared orange button across its bottom edge. The same body holds the searching state, paused state or room rows, preserving its minimum height.
+- A phase union (searching/paused/results) describes mutually exclusive UI states. A focus-scoped five-second timeout switches to results; Stop, blur and unmount clear it. Backgrounding clears the timer, and returning starts a fresh five seconds. Reduce Motion still permits the search timer while suppressing radar movement.
+- Results simulate nearby discovery using existing public, active fixture rooms and current participant/track data. Rows navigate to existing room routes. No GPS, Bluetooth or actual proximity detection is performed. Scan nearby restarts the simulation.
+
+## Welcome illustration refresh — 2026-11-24
+
+- Replaced the welcome character source with the approved 2D Moroccan group PNG (`cuevo-listening-together-illustrated.png`), keeping the previous asset available.
+- Updated the artwork aspect ratio to its actual 1312×1199 bounds so `contain` and existing bottom masks follow the new image without stretching. Existing positioning and fade remain.
+
+## Introduction illustration refresh — 2026-11-24
+
+- Switched all three intro slides to new transparent 2D ink/cel-shaded PNGs matching the approved Moroccan welcome cast: discovery, collaborative playlists, and voting. Original assets remain available.
+- Kept the tall contain layout and moved artwork down by 6% of screen height to keep floating notes, sleeves and arrows clear of the description.
+
+## Welcome dark appearance preview — 2026-11-24
+
+- Added optional `dark` props to welcome background, copy and edge blur. Welcome currently enables the preview: warm charcoal background, subdued existing glows, ivory headline, muted secondary text, light status bar and dark edge blur.
+- The prop approach keeps light styling available without changing shared global colors. This is a welcome-only visual trial, not an app-wide theme or saved preference.
+
+## Dark preview moved to Home — 2026-11-24
+
+- Restored light welcome appearance after scope correction. Dark preview starts on `/home` only.
+- `useHomePreviewColors` supplies a route-scoped palette for Home header, room cards, playlist cards and bottom navigation; other routes keep light colors. This is a visual trial, without automatic system theme detection or a saved preference.
+- Kept orange promotional/banner accents and used charcoal canvas, raised dark surfaces, subtle borders and warm ivory text. Simulator Home appearance visually verified.
+
+- Home dark-preview polish: softened card borders and replaced white listener-avatar rings with matching dark surface rings. Loading card surfaces, banner placeholders, bones and section-heading placeholders now use route-aware dark skeleton colors; light routes retain their original palette. Existing pulse and accessibility behavior remain.
+
+## Application dark appearance — 2026-11-24
+
+- Expanded the Home palette into `useAppColors`. Home and onward routes now use dark appearance, including rooms/queues, playlists/song details, profiles, Settings/Help, Nearby, subscriptions/payment, menus, pickers, notifications and loading states.
+- The initial `/` welcome route, `/introduction` and `/notification-permission` remain light, including their authentication dialogs. This is an application appearance choice; no system-theme setting or persistence toggle was introduced.
+- `useThemedStyles` caches the dark neutral variants of existing style sheets, retaining layout, colored art and action labels. Theme-aware icon colors, blur tints, status bars, placeholders and keyboards follow the active route. Shared password fields remain light during onboarding and dark in Settings.
+- Preserved pastel avatar colors with dark initials and retained the orange playlist header's original contrasting text. Darkened Nearby's map wash and reduced decorative subscription glows.
+- Visually checked Home/account menu, Settings, profile editor, subscription offer, payment form, room details/queue, playlist details and room discovery/filter sheet in iOS Simulator. Remaining physical Android/device appearance QA is not covered by those checks.
+
+## Profile-menu theme toggle — 2026-11-24
+
+- Added a sun/moon action in the profile menu to switch immediately between light and dark across Home and onward screens. The menu stays open to show the result.
+- ThemeProvider shares the preference through React context (like a web app context provider). A small SQLite key-value preference persists it on native; web uses localStorage. Onboarding still always selects light colors.
+- Home status bar now follows the selected appearance. Both toggle directions visually verified in iOS Simulator; typecheck/lint pass.
+
+## Welcome artwork replacement — 2026-11-25
+
+- Copied root `art.png` to `mobile/assets/illustrations/cuevo-welcome-art.png` and used it for both the sharp and blurred welcome image layers.
+- Matched the artwork wrapper’s `aspectRatio` to the new image’s 1199 × 1312 dimensions, preserving the existing bottom fade. Static `require` bundles the local asset with the app.
+
+## White welcome background — 2026-11-25
+
+- Removed the welcome background’s colored gradient layers and set its full-screen View to `#FFFFFF`. The artwork’s existing fade now blends into white.
+
+## Welcome artwork fade adjustment — 2026-11-25
+
+- Moved the welcome image mask transitions lower so more of the illustration stays opaque. Gradient stops control where the image begins fading into the white background.
+
+## Welcome layout concept — 2026-11-25
+
+- Moved the headline, description, and login text below the logo; the Get started action now sits separately below the hero.
+- The hero uses `flex: 1` to fill remaining space. Its image is bottom-aligned, matches the button’s horizontal inset, and has no bottom fade or margin, connecting the art directly to the button.
+
+## Fit welcome artwork to available height — 2026-11-25
+
+- Width-only image sizing could exceed the shorter hero after moving text above it. `onLayout` measures the hero; the illustration now uses the smaller of the available width and height-based width, preserving its proportions and bottom alignment without clipping.
+
+## Full-width welcome artwork and login placement — 2026-11-25
+
+- Artwork now spans the hero width; the hero clips excess height on shorter screens. The absolute Lottie layer renders after the artwork to appear above it.
+- Extracted `WelcomeLogin` so the login link sits below Get started while the headline and description stay below the logo.
+
+## Full-width Lottie canvas — 2026-11-25
+
+- Matched the animation view to the JSON canvas ratio (480/720), so contain mode scales by screen width instead of shrinking to the hero height. `translateX` and `translateY` adjust the overlay without changing layout.
+
+## Allow Lottie positioning above the hero — 2026-11-25
+
+- Moved `overflow: hidden` into an artwork-only wrapper. The hero now allows the Lottie overlay to extend upward when adjusting `translateY`; retained the current -240 offset for the top-position experiment.
+
+## Welcome button shadow — 2026-11-25
+
+- Added a rounded wrapper with `boxShadow` around the welcome Get started button. This adds depth beneath the existing orange glow while keeping the shared button styling unchanged.
+
+## Auth sheet corners and shadow — 2026-11-25
+
+- Increased both top corners to 36 and added a subtle upward shadow on an outer sheet wrapper. The inner sheet clips decorations to the rounded corners while the outer wrapper lets the shadow remain visible.
+
+## Logo above the auth sheet — 2026-11-25
+
+- Reused `WelcomeBrand` in the transparent native modal at the welcome page’s safe-area position and moved the sheet below it. Native modals use a separate layer, so rendering the shared logo there keeps it consistently visible during login/signup.
+
+## Preserve auth sheet geometry with foreground logo — 2026-11-25
+
+- Restored the original sheet top offset and keyboard offset. The shared welcome logo remains at its original safe-area position and renders after the sheet so it appears in front without resizing or moving the modal.
+
+## Single foreground welcome logo — 2026-11-25
+
+- Replaced the native auth Modal with an in-page animated overlay so zIndex can place the original, single WelcomeBrand above the sheet. Reserved its original layout space and kept its screen position and sheet dimensions. Android back dismisses the sheet; underlying welcome controls are hidden from accessibility while open.
+
+## Signup header cleanup — 2026-11-25
+
+- Removed the empty progress track below Create an account by leaving `progress` undefined on the signup step. Verification and profile progress remain available.
+
+## Forgot-password illustration — 2026-11-25
+
+- Generated a transparent character illustration matching the welcome art’s textured orange, cream, purple, and green style. Replaced the initial key icon with a centered 220 × 180 contain-mode Image; the sent-code state keeps its mail icon. The form scrolls to accommodate the taller artwork.
+
+## Forgot-password illustration concept revision — 2026-11-25
+
+- Replaced the character concept with textured headphones, a tangled purple cable, and an open padlock. Kept the matching palette and transparent background while using a distinct composition from the welcome page. Original generated asset remains available.
+
+## Check inbox illustration — 2026-11-25
+
+- Added a matching transparent orange mailbox and cream envelope illustration to the sent-code state, replacing its mail icon. Both recovery states share the same centered image dimensions.
+
+## Check inbox action cleanup — 2026-11-25
+
+- Removed Use another email and Back to log in from the sent-code state. The initial forgot-password form retains its login link using conditional rendering.
+
+## Reset password illustration and cleanup — 2026-11-25
+
+- Added a matching transparent combination-lock illustration. Removed the reset-code description and the Resend code / Use another email links; retained the reset-code input and validation. Removed unused resend state and callbacks.
+
+## Compact reset form without scrolling — 2026-11-25
+
+- Disabled scrolling and bounce for the reset sheet, removed the form headline, and hid the confirmation field’s visible label while keeping its accessibility label and placeholder.
+- Reduced form spacing and artwork height; artwork hides while the keyboard is open to free space for fields and the submit action. Other auth sheets retain scrolling.
+
+## Fresh start success illustration — 2026-11-25
+
+- Replaced the password-reset success icon with a matching transparent music-player, sprout, and checkmark illustration. It uses the shared compact artwork dimensions and stays visible in the completion state.
+
+## Soft welcome top gradient — 2026-11-25
+
+- Layered orange-red, cream, and purple radial gradients over the white welcome background. The glows are anchored to the top edge and fade to transparency within a 360px region, leaving the lower page white.
+
+## Orange-only top glow refinement — 2026-11-25
+
+- Limited the glow to 30% of the screen height. Offset orange ellipses form an asymmetric sweep, with an explicit white overlay reaching solid white before the region ends to blend with the illustration background.
+
+## Auth sheet shadow removal — 2026-11-25
+
+- Removed the outer auth sheet shadow, retaining its rounded top corners and existing layout.
+
+## Email verification artwork — 2026-11-25
+
+- Replaced the verification mail icon with a matching transparent cream envelope, orange six-dot code card, and purple shield illustration. Uses centered contain-mode sizing; the verified success state retains its checkmark icon.
+
+## Verification link cleanup — 2026-11-25
+
+- Removed Use another email from email verification and its unused callback prop.
+
+## All set verification success artwork — 2026-11-25
+
+- Replaced the verified-state checkmark icon with a matching transparent profile-card and verification-rosette illustration, using the same centered image dimensions as the verification artwork.
+
+## Introduction background grain — 2026-11-25
+
+- Reused the existing grain PNG as a low-opacity repeating Image over the shared introduction background gradients. All three slides receive the texture behind their text and artwork. `resizeMode="repeat"` tiles the texture instead of stretching its grain. Adjust `styles.grain.opacity` to tune strength.
+
+## First introduction screen as a complete poster — 2026-11-25
+
+- Generated a portrait poster combining orange gradient/grain, editorial typography, and a dynamic record-surfing group illustration. First slide now uses this single asset, with an accessibility description replacing the baked-in text for screen readers.
+- Native navigation and Next remain interactive overlays; slides two and three retain their current design. Contain mode preserves all poster typography across screen sizes.
+
+## Second introduction poster — 2026-11-25
+
+- Added a matching full poster for Create together: three friends dynamically assembling a giant mixtape. The second slide now uses baked-in typography and grain with the same native navigation and accessibility description as the first.
+
+## Final introduction poster — 2026-11-25
+
+- Added the matching Every vote counts poster, with friends launching a musical up-arrow from a turntable. All three slides now use their complete poster images; removed the old mixed rendering path while retaining accessible copy and interactive navigation.
+
+## First introduction muted video preview — 2026-11-25
+
+- Copied the generated root MP4 into bundled video assets and used expo-video on slide one with loop and muted enabled. Native controls are hidden; the original poster remains until the first frame renders. Playback pauses when leaving the slide or backgrounding the app. Other slides keep their poster images.
+
+## Second introduction muted loop — 2026-11-25
+
+- Added the second generated MP4 to slide two. The shared video component now accepts video/poster sources and remounts between slides to reset playback and first-frame readiness. Both videos remain muted, looping, and pause off-screen.
+
+## Third introduction muted loop — 2026-11-25
+
+- Added the final generated MP4; all three slides now specify their own video/poster assets and use the shared muted looping video component.
+
+## Soften introduction video loop boundaries — 2026-11-25
+
+- Fade to the matching still poster over the last half-second, keep it over the playback restart, then fade back into motion over 400ms. The shared video component applies this to all three slides. Animated opacity runs on the native driver; player time events only trigger transitions at loop boundaries.
+
+## Trim introduction loop tails — 2026-11-25
+
+- Created trimmed copies of all three intro videos, cutting their roughly 5.03s duration to a 4.75s target (about 280ms removed), with audio removed and originals preserved. Slides now use the trimmed assets; the existing fade follows each asset’s actual duration.
+
+## Forward/reverse introduction loops — 2026-11-25
+
+- Built ping-pong clips from the first 60 frames (2.5s) of each original video, followed by frames 58 down to 1. Skipping duplicate endpoints avoids an extra held frame at each turn. Each resulting clip has 118 frames at 24fps.
+- Slides use the new assets with ordinary muted looping playback. Removed the poster crossfade logic; the poster is now only a first-frame loading fallback. Originals and prior variants remain available.
+
+## Notifications during account setup — 2026-11-25
+
+- Moved the notification prompt into the account sheet immediately after name/photo setup. Allow, decline, Later, and already-decided permissions continue to the introduction; its last slide now opens Home directly.
+- Shared permission form handles both embedded setup and the existing standalone route; profile action now reads Continue.
+
+## Dedicated notification setup step — 2026-11-25
+
+- Removed automatic permission-based navigation. The notification step always renders after profile setup, with matching bell artwork, optional notification toggle, and Next button. Permission checking/requesting happens only after Next; previously decided permissions never skip the visible step.
+
+## Home menu width adjustment — 2026-11-25
+
+- Increased account and notification panels by 2px total, reducing each side inset from 20px to 19px to retain centering.
+
+- Home account and notification panels widened another 2px, with centered 18px side insets.
+
+## Group notification responses — 2026-11-25
+
+- Joined accept/decline into one rounded bordered container with a subtle vertical divider, retaining separate accessible buttons and existing response callbacks.
+
+## Notification type icon placement — 2026-11-25
+
+- Moved each notification type icon from the avatar corner into a horizontal title row, immediately before the title. Title text flexes to retain single-line truncation.
+
+- Notification titles now use `textTransform: uppercase` for stronger visual emphasis without changing the source text.
+
+## Neutral dark palette and transparent headers — 2026-11-25
+
+- Replaced purple-leaning dark surfaces with neutral black/charcoal and neutral gray text, borders, and skeletons. Updated both shared tokens and legacy style mappings. Orange brand accents stay intact.
+- Dark Home navbar and named topBar/header backgrounds are transparent; dark navigation backdrop fades are omitted so page content has one continuous background. The floating tab control retains its surface. Light appearance retains existing backgrounds.
+
+## Solid Home modal surfaces — 2026-11-25
+
+- Added an opt-in solid ModalSurface variant and enabled it for Home account, notification, search, and create/join sheets. Solid panels use opaque theme colors and do not render BlurView or translucent tint layers. Other modal surfaces retain their existing appearance.
+
+
+## First backend integration step — 2026-11-26
+
+- PostgreSQL stores accounts/challenges/sessions. FastAPI validates requests and
+  talks to PostgreSQL; the mobile app calls FastAPI, never the database directly.
+  Mailpit captures development verification/reset emails in a local inbox.
+- Alembic migrations create/version backend tables, independently of the mobile
+  SQLite playlist cache. Development and test databases are separate.
+- `mobile/src/api/client.ts` wraps `fetch`, like a shared API module in React for
+  the web. It handles timeouts, backend error codes, field errors, request IDs
+  and optional bearer headers. It does not store tokens or retry requests.
+- Expo substitutes `EXPO_PUBLIC_API_URL` from `.env.local` into the app bundle.
+  This URL is public configuration; backend secrets remain in `backend/.env`.
+  Simulator localhost reaches the Mac; a physical phone needs the Mac's LAN IP.
+- This step establishes the services and request layer. Existing form behavior
+  remains unchanged; next is real registration and verification, followed by
+  secure sessions. Backend: 50 tests passed. Client: lint/typecheck passed, and
+  the helper successfully called the live health/401/validation endpoints.
+
+
+## Backend ownership boundary — 2026-11-26
+
+- Never directly change any file under `backend/`; the teammate and their agents own all backend work, including profiles/friendships, configuration, migrations, tests and demo seed scripts. Request required functionality from them, then integrate their commits through Git merges preserving history. This supersedes earlier backend contribution plans.
+- Reading backend contracts and running existing services/migrations/tests for integration remain allowed. Client screens, API calls and project coordination docs remain our responsibility. See root `AGENTS.md` and `TEAM_RESPONSIBILITIES.md`.
+- Pending teammate request: an explicit development-only, safe-to-rerun seed command for persistent demo accounts; extend to demo rooms/playlists when their backend models/APIs exist. No seed script has been added here.
+
+
+## Assistant name and backend request format — 2026-11-26
+
+- The frontend assistant is **GPTato**. Whenever we need something from the backend teammate, provide a short, ready-to-send message introducing GPTato naturally, then explaining the finding, its client impact, and the requested change. Do not require a fixed phrase after the introduction. Draft only; sending requires explicit user authorization. This accompanies the rule that all backend file changes belong to the teammate and their agents.
+
+
+## Real registration and initial email verification — 2026-11-26
+
+- `mobile/src/api/registration.ts` calls registration and email verification,
+  validates successful responses at runtime, and maps API failures to form errors.
+- SignUpForm waits for server success before advancing; its Continue action is
+  guarded against duplicate submissions and displays Creating account while pending.
+  Errors keep the user on the form. Unmounted forms ignore late responses.
+- WelcomeScreen holds only the returned email challenge (ID, normalized/masked
+  email and server timestamps). Sign-up unmounts on success, releasing password
+  state instead of keeping a hidden credentials form behind verification.
+- VerifyEmailForm uses the server-issued challenge and expiry. Any six-digit code
+  can be submitted, but only the backend can accept it. Removed the local 123456
+  verification path. Recovery screens still use their previous local behavior.
+- Resend is omitted pending teammate contract work: POST /auth/email/resend
+  replaces the challenge but returns a generic accepted response; POST
+  /auth/email/verify requires the replacement challenge ID. The code-entry screen
+  cannot learn that ID from the API. Request a privacy-preserving resend/resume
+  contract with updated challenge/timing metadata available to the client. This
+  also matters after a lost registration response or app restart.
+- Login, secure sessions and profile persistence are separate upcoming steps.
+  Current profile/onboarding UI remains local after successful verification.
+- Checks: npm run typecheck and npm run lint passed. Client functions exercised
+  live registration, Mailpit delivery, duplicate-email failure, wrong code,
+  successful emailed code and consumed-code rejection. Malformed-success guards
+  were checked using substitute responses. One verified local check account,
+  gptato-7aff58fd@example.com, remains with a random password that was not logged.
+  No simulator interaction was performed. No backend files changed.
+
+
+## Stale simulator verification diagnosis — 2026-11-26
+
+- User reported that a random verification code advanced. The API logs showed no corresponding user registration/verification requests. A full Expo Go reload exposed an empty `mobile/assets/covers/catalog/golden.jpg` that prevented the updated bundle from loading. Restored that asset from its committed original (55,732 bytes); the empty prior file was backed up in `/tmp/musicroom-golden-before-repair.jpg`.
+- Retried Expo Go loading, created a local test account through the simulator form, and submitted 839172. The simulator stayed on verification and displayed “The code could not be verified.” The updated server-backed client is now running. This supersedes the earlier note that simulator interaction was unverified.
+- Fast Refresh/previous runtime state is not proof that the current source is running. If API behavior appears unchanged, inspect Metro errors and perform a full reload. No backend files changed.
+
+
+## Login and secure sessions — 2026-11-26
+
+- LoginForm now calls POST /api/v1/auth/login with loading/errors and duplicate-submit
+  protection. Successful email verification leads to login because verification
+  returns account state, not tokens. No password is persisted by the app.
+- `src/api/session.ts` validates auth/account responses and serializes all session
+  operations. `src/state/AuthContext.tsx` stores the token pair in one SecureStore
+  value (iOS Keychain / Android encrypted storage), scoped to the configured API
+  URL. Browser preview keeps tokens in memory only, pending a browser auth contract.
+- On startup, /me validates an unexpired session; expired access tokens are rotated
+  via /auth/refresh. Foreground checks and authenticated requests also renew tokens.
+  Old refresh credentials are deleted before submission so crashes/lost responses
+  cannot replay a possibly consumed token. Ambiguous refresh failures require login.
+  A temporary /me outage preserves stored credentials and offers retry.
+- SessionGate hides routes during restoration and redirects signed-out deep links
+  to Welcome. Completed profiles enter /home; incomplete accounts resume profile
+  setup. Authentication does not assert that fixture rooms/playlists are backend data.
+- Logout clears secure credentials then calls the server to revoke the session.
+  If the server is unreachable, local sign-out still succeeds; remote revocation
+  cannot be confirmed. Providers reset on account change, and SQLite playlist
+  cache keys now use the actual account ID instead of shared 'self'.
+- Backend has /me/onboarding/profile-completed, but it only toggles a flag. It has
+  no name/profile persistence or avatar-upload routes. ProfileForm still has local
+  form state and its existing Continue/notification/introduction flow. We do not
+  mark server profileCompleted true without a profile save. Consequently incomplete
+  users resume setup on reopening, even after walking through the local UI.
+- Request teammate-owned profile read/update and avatar upload/delete APIs, plus
+  the onboarding completion contract. Client integration follows once available.
+- Installed SDK-compatible expo-secure-store (~58.0.3) through Expo CLI; plugin
+  added to app.json. Works in the current Expo Go; standalone apps require rebuild.
+- Verification: npm run typecheck, npm run lint and npm run test:session passed
+  (7 focused session tests). Live backend login, /me restoration, refresh and logout
+  passed; revoked access was rejected. Simulator login with existing test account
+  succeeded and displayed profile setup, proving the secure write completed. An iOS
+  Save Password prompt appeared; no password-saving action was accepted. A full
+  simulator cold-launch restoration and Home routing with a completed real profile
+  are not yet device-verified. No backend files changed.
+
+
+## UI work resumed; backend integration and push on standby — 2026-11-26
+
+- User requested saving progress and returning to UI updates while the teammate fixes open backend issues. Pause further backend-dependent integration and push-notification work until requested. All backend file ownership stays with the teammate and their agents.
+- Current status, outstanding resend/resume, rate-limit, seed-data and profile/avatar requests, tests and device-verification limits are consolidated at the top of SESSION_HANDOFF and reflected in UI_PROGRESS.
+- OS notification authorization is remembered locally; real push token registration/account association/delivery/tap integration remains deferred. Current notification setup appears after profile setup, then continues to introduction.
+- Documentation checkpoint only: no code changes, new tests, commit/push or service shutdown requested/performed for this save.
+
+
+## Playlist header cover spacing — 2026-11-26
+
+- Header artwork now stretches vertically inside 2 logical pixels of card padding at the top, right and bottom. Text retains its inset. Removed the artwork border so the covers meet that inset directly.
+- `alignSelf: 'stretch'` overrides the row’s centered alignment for the artwork; the cover’s opt-in `fill` uses absolute positioning inside that wrapper, similar to CSS inset: 0. Other playlist covers keep their existing size.
+
+
+## Editable playlist header mesh — 2026-11-26
+
+- Recreated the selected Figma Plum Magic look with overlapping native radial gradients in PlaylistHeaderBackground. Palette values are centralized for color experiments. Soft transparent fades approximate the blurred vector blend; exact Figma vector/effect values could not be read due to browser inspector failures. No exported background image is used.
+- White/soft lavender text keeps the header readable on the darker palette. Artwork retains its 2px inset.
+
+
+## Figma mesh correction with original geometry — 2026-11-26
+
+- Replaced the radial approximation with geometry extracted from the selected Plum Magic SVG: three transformed radial-gradient ellipses, three curved overlay highlights, original gradient stops, Gaussian blur and the original extracted grain image with 49% effective color-dodge opacity. Colors remain editable in playlistHeaderPalette. The small vector reference lives in assets/illustrations/playlist-header-plum-magic.svg; the separate grain is in assets/decorations.
+- Native react-native-svg Gaussian blur uses screen units (verified in its installed iOS implementation), so onLayout scales X/Y blur radii from the 1920×1080 design to the card dimensions. Web keeps the original SVG radii. Native View mixBlendMode supplies overlay/color-dodge compositing.
+- Verified the refreshed playlist header in iPhone 17 Simulator: visible curved pink/lavender highlights, purple field and fine grain; the 2px cover inset remains. This supersedes the prior approximate mesh note.
+
+
+## Orange playlist header palette — 2026-11-26
+
+- Changed only mesh color stops to Cuevo orange, amber, burnt orange and rust, with a peach highlight. Original vector geometry, blur and grain remain. Header secondary text uses warm cream to match.
+
+
+## Selected Evergreen Whisper header — 2026-11-26
+
+- Replaced the orange Plum geometry with the currently selected Figma 09 - Evergreen Whisper: five original blurred circles/ellipses and exact teal/forest/leaf stops. Grain image matches the prior source byte-for-byte; reused it with the selected design’s 0.56 × 0.8 = 0.448 opacity. Colors remain editable, with the same native blur scaling and 2px artwork inset.
+
+
+## Genre-driven playlist header themes — 2026-11-26
+
+- Header derives the dominant curated genre from current song IDs, then passes a palette prop to the shared Evergreen mesh. Theme values live in src/theme/playlistThemes.ts. Pop retains the approved green; hip-hop/fitness orange, R&B purple, house blue, rock red, jazz gold, Afrobeats amber, indie periwinkle and World teal.
+- Each unique track votes once per curated genre. Worldwide aliases to World; alphabetical ties are stable across reordering. Empty/unknown songs fall back to Pop green. Theme recalculates when playlist contents render after edits; no stored genre or backend changes. Like React web, props make one reusable visual component respond to data.
+
+
+## Playlist header artwork left and overlapping title — 2026-11-26
+
+- Removed the public/private playlist badge. Moved the cover grid before the text in the header row, with 2px top/left/bottom insets and padded metadata on the right.
+- Title is 28px/32px with a -24px left margin across the 12px gap, creating 12px of cover overlap. Content zIndex places text above the covers; a subtle text shadow improves contrast. Metadata stays within its normal column.
+
+
+## Playlist credit and owner highlight — 2026-11-26
+
+- Creator credit now reads “by …” and is anchored at the bottom-right of the stretched header text column. Bottom padding reserves space for it under the title and count.
+- Playlist collaborators reuse RoomParticipants’ gold avatar border and shield badge by passing creatorId as hostId. An optional hostLabel gives screen readers “playlist owner” while room labels keep their existing default. The owner is included first, deduplicated with collaborator IDs.
+
+
+## Shared fixed navbar on main tabs — 2026-11-26
+
+- Moved Home’s navbar and account/search/notification overlays into navigation/MainHeader, rendered once above TabSlot in the main tab layout. Home, Rooms and Playlists now share a fixed navbar and the same in-memory notification read/response state across tab changes.
+- MainHeader owns the top safe-area inset. Main list screens remove their duplicate top inset; Home removes its old absolute header and scroll spacer. The header sits outside the scrolling area, so it stays fixed using normal flex layout. Detail routes keep their separate headers.
+
+## Static Plus header artwork — 2026-11-27
+
+- HomeHero now layers a transparent PNG on the right above the orange mesh, with the playlist header's identical grain asset, scale, opacity and color-dodge blend. Removed the home video's player and playback lifecycle hooks.
+- Like absolute-positioned images on the web, React Native Image with resizeMode="contain" keeps the full illustration proportional inside a reserved decorative area. The existing SVG mask clips it to the card silhouette; copy and the Plus button remain above the decorative layers.
+
+- Follow-up: artwork now sits outside MaskedView so it can extend beyond the card. `artworkLayout` in HomeHero groups width, right and bottom controls; aspectRatio preserves the PNG proportions as width changes. Negative offsets move it beyond the corresponding edge, as in CSS. Only the background and grain stay masked.
+
+- Plus artwork sizing correction: a plain View now owns percentage width and aspectRatio; its Image explicitly fills that box. This avoids relying on the image's intrinsic dimensions when only width is supplied. Explicit zIndex places artwork above the masked background and copy above artwork. Existing user-adjusted offsets remain intact.
+
+- Plus card copy spacing: the content column has the card's 224px minimum height and an 8px bottom inset. A flex: 1 headline wrapper centers the text in the remaining space, pushing the button/price row to the bottom without absolute-positioning interactive controls. Like CSS flexbox, this can still grow for larger text.
+
+
+## Android toast blur and system navigation — 2026-11-27
+
+- ToastViewport wraps screen content in BlurTargetView and gives the toast a shared ref through React context. Like a DOM ref, it identifies the content to sample; Android requires an explicit target and blurMethod. Each native Modal needs a target in its own window. The toast stays outside the captured content to avoid capturing itself. dimezisBlurView enables older Android support too, with a higher rendering cost below Android 12.
+- expo-navigation-bar disables the system contrast scrim via its config plugin. Native style dark means dark buttons; light means light buttons. Icons follow the app screen palette. Android owns the exact icon color; arbitrary gray is unavailable. The config plugin requires a new native build. Decorative SVG backgrounds are unchanged pending the next design step.
+
+- Cuevo Plus background (2026-11-27): replaced the ColorFlow video and poster with native View backgroundImage gradients. A vertical cream/orange/charcoal gradient plus transparent radial color fields recreate the portrait composition in code. Absolute-fill layers act like stacked CSS backgrounds behind both page sections, with no media player or asset loading.
+
+
+
+- Plus reaching pose (2026-11-27): added a transparent square Cuevo character illustration first in the hero ScrollView. Explicit width/height sized from window dimensions keep the full extreme-perspective hands visible, with copy below and the gradient visible through alpha.
+
+- Plus hero layout (2026-11-27): badge sits in the top safe-area header beside the independent close control. The illustration uses negative bottom margin and zIndex to overlap the headline below, like stacked CSS layers. Feature rows stretch to equal width, with left-aligned flexible labels.
+
+- Profile surface (2026-11-27): both profile screens share a full-page white surface through ProfileLayout, including the safe area and header. Removed the inset card background/fade and centralized 20-point horizontal content padding so the cover, identity, fields and user details align.
+
+- Profile identity row (2026-11-27): shared header accepts optional subtitle and nameAction props. Other profiles supply username and the existing friend-request control beside the name; own profile retains its editable header. Avatar has an 8-point left inset.

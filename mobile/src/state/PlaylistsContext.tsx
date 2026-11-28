@@ -1,9 +1,10 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { mockPlaylists, canEditPlaylistSongs, type PlaylistDetails, type Playlist } from '../data/mockPlaylists';
 import { getSong } from '../data/songs';
 
 const PlaylistsContext = createContext<{
   playlists: Playlist[];
+  restorePlaylist: (playlist: Playlist) => void;
   editPlaylist: (id: string, details: PlaylistDetails) => void;
   createPlaylist: (name: string) => string;
   addSong: (playlistId: string, songId: string) => void;
@@ -13,6 +14,11 @@ const PlaylistsContext = createContext<{
 
 export function PlaylistsProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState(mockPlaylists);
+  const restorePlaylist = useCallback((savedPlaylist: Playlist) => {
+    setPlaylists(current => current.some(playlist => playlist.id === savedPlaylist.id)
+      ? current.map(playlist => playlist.id === savedPlaylist.id ? savedPlaylist : playlist)
+      : [savedPlaylist, ...current]);
+  }, []);
   function createPlaylist(name: string) {
     const id = `playlist-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const playlist: Playlist = { id, name: name.trim(), description: '', creatorId: 'self', collaboratorIds: ['self'], private: true, songIds: [] };
@@ -46,7 +52,7 @@ export function PlaylistsProvider({ children }: { children: ReactNode }) {
       return reordered;
     });
   }
-  return <PlaylistsContext.Provider value={{ playlists, editPlaylist, createPlaylist, addSong, removeSong, moveSong }}>{children}</PlaylistsContext.Provider>;
+  return <PlaylistsContext.Provider value={{ playlists, restorePlaylist, editPlaylist, createPlaylist, addSong, removeSong, moveSong }}>{children}</PlaylistsContext.Provider>;
 }
 export function usePlaylists() {
   const value = useContext(PlaylistsContext);

@@ -1,28 +1,47 @@
-import { useState } from 'react';
-import { Image, Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
+import GoogleAuthButton from '../../components/GoogleAuthButton';
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import PrimaryButton from '../../components/PrimaryButton';
+import { registerAccount, registrationError, type RegistrationChallenge } from '../../api/registration';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 import LoginFields from '../login/components/LoginFields';
 import { emailError, passwordError } from './authValidation';
 
-export default function SignUpForm({ onLogin, onContinue, initialEmail = '' }: { onLogin: () => void; onContinue: (email: string) => void; initialEmail?: string }) {
+export default function SignUpForm({ onLogin, onContinue, initialEmail = '' }: { onLogin: () => void; onContinue: (challenge: RegistrationChallenge) => void; initialEmail?: string }) {
   const [credentials, setCredentials] = useState({ email: initialEmail, password: '' });
   const [error, setError] = useState('');
-  function continueSignup() {
+  const [submitting, setSubmitting] = useState(false);
+  const pending = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  async function continueSignup() {
+    if (pending.current) return;
     const invalid = emailError(credentials.email) || passwordError(credentials.password);
     setError(invalid);
-    if (!invalid) { Keyboard.dismiss(); onContinue(credentials.email.trim()); }
+    if (invalid) return;
+    pending.current = true;
+    setSubmitting(true);
+    Keyboard.dismiss();
+    try {
+      const challenge = await registerAccount(credentials.email, credentials.password);
+      if (mounted.current) onContinue(challenge);
+    } catch (error) {
+      if (mounted.current) setError(registrationError(error));
+    } finally {
+      pending.current = false;
+      if (mounted.current) setSubmitting(false);
+    }
   }
   return (
     <View style={styles.form}>
-      <View>
+      <View pointerEvents={submitting ? 'none' : 'auto'}>
         <LoginFields newAccount initialEmail={initialEmail} onChange={value => { setCredentials(value); setError(''); }} />
 
       </View>
 
-      <View style={{ gap: 12 }}>{!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}<PrimaryButton label="Continue" onPress={continueSignup} /></View>
+      <View style={{ gap: 12 }}>{!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}<PrimaryButton label={submitting ? 'Creating account…' : 'Continue'} disabled={submitting} onPress={continueSignup} /></View>
 
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
@@ -30,19 +49,10 @@ export default function SignUpForm({ onLogin, onContinue, initialEmail = '' }: {
         <View style={styles.dividerLine} />
       </View>
 
-      {/* Auth actions remain visual previews until services are connected. */}
-      <Pressable disabled accessibilityRole="button" accessibilityLabel="Continue with Google" style={styles.googleButton}>
-        <Image
-          source={require('../../../assets/brand/google-g.png')}
-          resizeMode="contain"
-          accessible={false}
-          style={styles.googleImage}
-        />
-        <Text style={styles.googleLabel}>Continue with Google</Text>
-      </Pressable>
+      <GoogleAuthButton label="Continue with Google" disabled={submitting} onError={setError} onBusy={busy => { pending.current = busy; setSubmitting(busy); }} />
 
 
-      <Pressable onPress={onLogin} accessibilityRole="button" style={styles.signupButton}>
+      <Pressable disabled={submitting} onPress={onLogin} accessibilityRole="button" style={styles.signupButton}>
         <Text style={styles.signupText}>
           Already have an account? <Text style={styles.signupLabel}>Log in</Text>
         </Text>

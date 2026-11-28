@@ -1,9 +1,12 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, AppState, Easing, Image, StyleSheet, useAnimatedValue, View, type ImageSourcePropType } from 'react-native';
 
 export default function RoomRecord({ cover, playing, tint }: { cover?: ImageSourcePropType; playing: boolean; tint: string }) {
+  const styles = useThemedStyles(baseStyles);
+
   const rotation = useAnimatedValue(0);
   const [reduceMotion, setReduceMotion] = useState(true);
   useEffect(() => {
@@ -35,7 +38,7 @@ export default function RoomRecord({ cover, playing, tint }: { cover?: ImageSour
     </Animated.View>
   </View>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   frame: { width: '46%', maxWidth: 176, aspectRatio: 1, padding: 3 },
   record: { flex: 1, borderRadius: 200, backgroundColor: '#191817', borderWidth: 2, borderColor: '#302C29', alignItems: 'center', justifyContent: 'center', boxShadow: '0px 5px 10px rgba(35,27,24,0.16)' },
   groove: { position: 'absolute', borderRadius: 200, borderWidth: 1, borderColor: '#393633' },

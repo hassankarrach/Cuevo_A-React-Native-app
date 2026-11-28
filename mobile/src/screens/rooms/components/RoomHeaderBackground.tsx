@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useFocusEffect } from 'expo-router';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { useCallback, useEffect, useState } from 'react';
@@ -7,6 +8,8 @@ const video = require('../../../../assets/videos/cuevo-room-gradient-v2.mp4');
 const poster = require('../../../../assets/videos/cuevo-room-gradient-v2-poster.png');
 
 export default function RoomHeaderBackground() {
+  const styles = useThemedStyles(baseStyles);
+
   const [reduceMotion, setReduceMotion] = useState(true);
   const [hasFrame, setHasFrame] = useState(false);
   const player = useVideoPlayer(video, instance => {
@@ -35,7 +38,7 @@ export default function RoomHeaderBackground() {
     <VideoView player={player} nativeControls={false} contentFit="fill" surfaceType="textureView" onFirstFrameRender={() => setHasFrame(true)} style={[StyleSheet.absoluteFill, { opacity: hasFrame && !reduceMotion ? 1 : 0 }]} />
   </View>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   background: { ...StyleSheet.absoluteFill, borderRadius: 25, overflow: 'hidden', backgroundColor: '#FFFFFF' },
   poster: { width: '100%', height: '100%' },
 });

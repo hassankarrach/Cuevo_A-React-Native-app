@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
+import { useAppColors } from '../../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import type { ComponentProps } from 'react';
@@ -6,6 +8,9 @@ import { fonts } from '../../../theme/fonts';
 
 export type RoomActivityEvent = { id: number; message: string; timestamp: number; icon: ComponentProps<typeof Ionicons>['name'] };
 export default function RoomActivity({ events }: { events: RoomActivityEvent[] }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   return <View style={styles.section}>
     <Text accessibilityRole="header" style={styles.heading}>Room activity</Text>
     <Text style={styles.hint}>The latest moments in this room.</Text>
@@ -19,7 +24,7 @@ export default function RoomActivity({ events }: { events: RoomActivityEvent[] }
     </View>)}
   </View>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   section: { marginTop: 25, marginLeft: 6, marginRight: 18 },
   heading: { fontFamily: fonts.semibold, fontSize: 21, lineHeight: 28, color: colors.text },
   hint: { fontFamily: fonts.regular, fontSize: 12, color: colors.textSecondary, marginTop: 5, marginBottom: 18 },

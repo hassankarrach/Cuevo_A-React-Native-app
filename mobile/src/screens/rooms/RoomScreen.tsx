@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { BlurTargetView } from 'expo-blur';
@@ -31,6 +33,9 @@ const roomDetails: Record<string, RoomHeaderDetails & { role: Role; trackIndex: 
 };
 
 export default function RoomScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const { id } = useLocalSearchParams<{ id: string }>();
   const { rooms } = useMockRooms();
   if (!rooms[id]) return <SafeAreaView style={styles.screen}><Pressable onPress={() => router.replace('/rooms')} style={styles.back} accessibilityRole="button" accessibilityLabel="Back to rooms"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable><Text style={styles.hostTitle}>Room unavailable</Text></SafeAreaView>;
@@ -38,6 +43,9 @@ export default function RoomScreen() {
 }
 
 function RoomPreview({ id }: { id: string }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const blurTarget = useRef<ComponentRef<typeof View> | null>(null);
   const insets = useSafeAreaInsets();
   const { profile } = useLocalProfile();
@@ -119,7 +127,7 @@ function RoomPreview({ id }: { id: string }) {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
-      <StatusBar style="dark" />
+      <StatusBar style={colors.dark ? 'light' : 'dark'} />
       <BlurTargetView ref={blurTarget} style={styles.body}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingTop: 44, paddingBottom: Math.max(insets.bottom, 16) + 90 }]}>
       <RoomHeaderCard room={room} playback={playback} isHost={role === 'host'} onToggle={togglePlayback} onNext={nextSong} onSeek={seconds => { if (!ended && role === 'host') updateQueue(id, { type: 'seek', seconds }); }} />
@@ -170,7 +178,7 @@ function RoomPreview({ id }: { id: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   hidden: { display: 'none' },
   roomTitleRow: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 8 },
   roomTitle: { flexShrink: 1, fontFamily: fonts.semibold, fontSize: 17, lineHeight: 23, color: colors.text },

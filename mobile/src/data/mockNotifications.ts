@@ -9,10 +9,10 @@ export type MockNotification = {
 };
 
 export const mockNotifications: MockNotification[] = [
-  { id: 'friend-sara', actorId: 'sara', kind: 'friend-request', title: 'Friend request', message: 'Sara wants to connect with you.', minutesAgo: 2, read: false, destination: { type: 'profile', id: 'sara' } },
-  { id: 'invite-on-repeat', actorId: 'amine', kind: 'room-invite', title: 'Room invitation', message: 'Amine invited you to On Repeat.', minutesAgo: 8, read: false, destination: { type: 'room', id: 'on-repeat' } },
-  { id: 'invite-weekend', actorId: 'sara', kind: 'playlist-invite', title: 'Playlist invitation', message: 'Sara invited you to build Weekend Together.', minutesAgo: 15, read: false, destination: { type: 'playlist', id: 'weekend-together' } },
-  { id: 'playlist-added', actorId: 'adam', kind: 'playlist-update', title: 'Playlist updated', message: 'Adam added a song to Late Night Drives.', minutesAgo: 32, read: false, destination: { type: 'playlist', id: 'late-night-drives' } },
-  { id: 'room-joined', actorId: 'lina', kind: 'room-activity', title: 'Your room', message: 'Lina joined Kitchen Disco.', minutesAgo: 46, read: false, destination: { type: 'room', id: 'kitchen-disco' } },
-  { id: 'friend-adam', actorId: 'adam', kind: 'friend-accepted', title: 'New connection', message: 'Adam accepted your friend request.', minutesAgo: 120, read: true, destination: { type: 'profile', id: 'adam' } },
+  { id: 'friend-sara', actorId: 'sara', kind: 'friend-request', title: 'Sara wants to connect', message: 'Sara wants to connect with you.', minutesAgo: 2, read: false, destination: { type: 'profile', id: 'sara' } },
+  { id: 'invite-on-repeat', actorId: 'amine', kind: 'room-invite', title: 'Amine invited you to On Repeat', message: 'Amine invited you to On Repeat.', minutesAgo: 8, read: false, destination: { type: 'room', id: 'on-repeat' } },
+  { id: 'invite-weekend', actorId: 'sara', kind: 'playlist-invite', title: 'Sara invited you to Weekend Together', message: 'Sara invited you to build Weekend Together.', minutesAgo: 15, read: false, destination: { type: 'playlist', id: 'weekend-together' } },
+  { id: 'playlist-added', actorId: 'adam', kind: 'playlist-update', title: 'New song in Late Night Drives', message: 'Adam added a song to Late Night Drives.', minutesAgo: 32, read: false, destination: { type: 'playlist', id: 'late-night-drives' } },
+  { id: 'room-joined', actorId: 'lina', kind: 'room-activity', title: 'Lina joined Kitchen Disco', message: 'Lina joined Kitchen Disco.', minutesAgo: 46, read: false, destination: { type: 'room', id: 'kitchen-disco' } },
+  { id: 'friend-adam', actorId: 'adam', kind: 'friend-accepted', title: 'Adam accepted your request', message: 'Adam accepted your friend request.', minutesAgo: 120, read: true, destination: { type: 'profile', id: 'adam' } },
 ];

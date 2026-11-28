@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../theme/useThemedStyles';
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../theme/colors';
@@ -8,13 +10,17 @@ type PrimaryButtonProps = {
   disabled?: boolean;
   onPress?: () => void;
   showArrow?: boolean;
+  icon?: ReactNode;
 };
 
-export default function PrimaryButton({ label, disabled, onPress, showArrow = false }: PrimaryButtonProps) {
+export default function PrimaryButton({ label, disabled, onPress, showArrow = false, icon }: PrimaryButtonProps) {
+  const styles = useThemedStyles(baseStyles);
+
   return (
     <View style={styles.glow}>
       <Pressable disabled={disabled} onPress={onPress} accessibilityRole="button" style={styles.button}>
         <View pointerEvents="none" style={styles.bottomLight} />
+        {icon && <View accessible={false} importantForAccessibility="no-hide-descendants">{icon}</View>}
         <Text style={styles.label}>{label}</Text>
         {showArrow && <View accessible={false} style={styles.arrow}>
           <View style={styles.arrowShaft} />
@@ -25,7 +31,7 @@ export default function PrimaryButton({ label, disabled, onPress, showArrow = fa
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   glow: {
     borderRadius: 15,
     boxShadow: '0px 5px 18px rgba(255, 77, 36, 0.22)',

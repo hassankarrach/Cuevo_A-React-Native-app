@@ -1,8 +1,10 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { BlurTargetView } from 'expo-blur';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useRef, useState, type ComponentRef } from 'react';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { canEditPlaylistSongs, playlistEditPolicy } from '../../data/mockPlaylists';
@@ -12,7 +14,9 @@ import TabBarBackdrop from '../../components/navigation/TabBarBackdrop';
 import { getMockAccount } from '../../data/mockAccounts';
 import { getSong, type Song } from '../../data/songs';
 import { useLocalProfile } from '../../state/ProfileContext';
+import { useAuth } from '../../state/AuthContext';
 import { usePlaylists } from '../../state/PlaylistsContext';
+import { getCachedPlaylist, savePlaylist } from '../../storage/playlistCache';
 import { showToast } from '../../utils/toast';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
@@ -25,16 +29,41 @@ export default function PlaylistScreen() {
   return <PlaylistContent key={id} id={id} />;
 }
 function PlaylistContent({ id }: { id: string }) {
+  const { account } = useAuth();
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   const blurTarget = useRef<ComponentRef<typeof View> | null>(null);
-  const { playlists, editPlaylist, addSong, removeSong, moveSong } = usePlaylists();
+  const { playlists, restorePlaylist, editPlaylist, addSong, removeSong, moveSong } = usePlaylists();
   const { profile } = useLocalProfile();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [cacheStatus, setCacheStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const playlist = playlists.find(item => item.id === id);
+  useEffect(() => {
+    if (!account) return;
+    let cancelled = false;
+    getCachedPlaylist(account.id, id).then(saved => {
+      if (cancelled) return;
+      if (saved) restorePlaylist(saved.playlist);
+      setCacheStatus('ready');
+    }).catch(() => {
+      if (!cancelled) setCacheStatus('error');
+    });
+    return () => { cancelled = true; };
+  }, [id, restorePlaylist, account]);
+
+  useEffect(() => {
+    if (cacheStatus !== 'ready' || !playlist || !account) return;
+    savePlaylist(account.id, playlist).catch(() => {
+      showToast('error', 'Couldn’t save playlist on this device', 'Please try opening it again.');
+    });
+  }, [playlist, cacheStatus, account]);
+
   const goBack = () => router.canGoBack() ? router.back() : router.replace('/playlists');
-  if (!playlist) return <SafeAreaView style={styles.screen}><Pressable onPress={goBack} style={styles.back} accessibilityRole="button" accessibilityLabel="Back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable><Text style={styles.sectionTitle}>Playlist unavailable</Text></SafeAreaView>;
+  if (cacheStatus !== 'ready' || !playlist) return <SafeAreaView style={styles.screen}><Pressable onPress={goBack} style={styles.back} accessibilityRole="button" accessibilityLabel="Back"><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable><Text style={styles.sectionTitle}>{cacheStatus === 'loading' ? 'Loading playlist…' : cacheStatus === 'error' ? 'Couldn’t load saved playlist. Go back and try again.' : 'Playlist unavailable'}</Text></SafeAreaView>;
   const tracks = playlist.songIds.map(getSong).filter((song): song is Song => !!song);
   const creator = playlist.creatorId === 'self' ? profile.displayName : getMockAccount(playlist.creatorId)?.displayName ?? 'Creator';
   const canEdit = canEditPlaylistSongs(playlist);
@@ -49,7 +78,7 @@ function PlaylistContent({ id }: { id: string }) {
     ]);
   }
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
-    <StatusBar style="dark" />
+    <StatusBar style={colors.dark ? 'light' : 'dark'} />
     <BlurTargetView ref={blurTarget} style={styles.body}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 16) + 35 }]}>
         <PlaylistHeader playlist={playlist} creator={creator} />
@@ -58,7 +87,7 @@ function PlaylistContent({ id }: { id: string }) {
           <Text accessibilityRole="header" style={styles.sectionTitle}>Collaborators</Text>
           {canEdit && <Pressable onPress={() => setInviteOpen(true)} accessibilityRole="button" accessibilityLabel="Invite collaborators" style={styles.action}><Ionicons name="add" size={18} color={colors.primary} /><Text style={styles.actionLabel}>Invite</Text></Pressable>}
         </View>
-        <View style={styles.participants}><RoomParticipants participantIds={playlist.collaboratorIds} /></View>
+        <View style={styles.participants}><RoomParticipants participantIds={[...new Set([playlist.creatorId, ...playlist.collaboratorIds])]} hostId={playlist.creatorId} hostLabel="playlist owner" /></View>
         <Text style={styles.permission}>{policy === 'owner' ? 'Only the creator can edit songs' : policy === 'collaborators' ? 'Invited collaborators can edit songs' : 'Everyone can edit songs'}</Text>
         <View style={[styles.sectionHeading, styles.songsHeading]}>
           <Text accessibilityRole="header" style={styles.sectionTitle}>Songs</Text>
@@ -89,7 +118,7 @@ function PlaylistContent({ id }: { id: string }) {
     <AddSongsModal visible={addOpen} onClose={() => setAddOpen(false)} songIds={playlist.songIds} onAdd={songId => addSong(id, songId)} />
   </SafeAreaView>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFCF8' },
   body: { flex: 1 },
   content: { paddingHorizontal: 18, paddingTop: 44 },

@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 const rayAngles = [-64, -42, -20, 2, 24, 46, 68];
 
@@ -11,12 +11,19 @@ export default function IntroductionBackground() {
       </View>
       <View style={styles.bottomGlow} />
       <View style={styles.leftGlow} />
+      <Image
+        source={require('../../../assets/decorations/room-header-grain.png')}
+        resizeMode="repeat"
+        style={styles.grain}
+        accessible={false}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   background: { ...StyleSheet.absoluteFill, backgroundColor: '#FF4D24', overflow: 'hidden' },
+  grain: { ...StyleSheet.absoluteFill, opacity: 0.18 },
   topWarmth: {
     ...StyleSheet.absoluteFill,
     backgroundImage: 'linear-gradient(to bottom, rgba(238, 66, 12, 0.5) 0%, rgba(255, 100, 31, 0) 60%)',

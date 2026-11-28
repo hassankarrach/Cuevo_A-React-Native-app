@@ -1,22 +1,27 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, Platform } from 'react-native';
 import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 
-export default function AuthField({ label, value, onChangeText, kind = 'email', error, hint, currentPassword = false }: {
-  label: string; value: string; onChangeText: (value: string) => void; kind?: 'email' | 'password' | 'code'; error?: string; hint?: string; currentPassword?: boolean;
+export default function AuthField({ label, value, onChangeText, kind = 'email', error, hint, hideLabel = false, currentPassword = false }: {
+  label: string; value: string; onChangeText: (value: string) => void; kind?: 'email' | 'password' | 'code'; error?: string; hint?: string; hideLabel?: boolean; currentPassword?: boolean;
 }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const [focused, setFocused] = useState(false);
   const [revealed, setRevealed] = useState(false);
   return <View style={styles.field}>
-    <Text style={styles.label}>{label}</Text>
+    {!hideLabel && <Text style={styles.label}>{label}</Text>}
     <View style={[styles.border, focused && styles.focused, !!error && styles.invalid]}>
       <View style={styles.surface}>
         <Ionicons name={kind === 'email' ? 'mail' : kind === 'code' ? 'keypad' : 'lock-closed'} size={21} color="#92979B" accessible={false} />
-        <TextInput value={value} onChangeText={text => onChangeText(kind === 'code' ? text.replace(/\D/g, '').slice(0, 6) : text)}
+        <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={value} onChangeText={text => onChangeText(kind === 'code' ? text.replace(/\D/g, '').slice(0, 6) : text)}
           accessibilityLabel={label} placeholder={kind === 'email' ? 'you@example.com' : kind === 'code' ? '000000' : label}
-          placeholderTextColor="#A19892" onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          placeholderTextColor={colors.textSecondary} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           keyboardType={kind === 'email' ? 'email-address' : kind === 'code' ? 'number-pad' : 'default'}
           {...(Platform.OS === 'ios'
             ? { textContentType: kind === 'email' ? 'emailAddress' as const : kind === 'code' ? 'oneTimeCode' as const : currentPassword ? 'password' as const : 'newPassword' as const }
@@ -31,7 +36,7 @@ export default function AuthField({ label, value, onChangeText, kind = 'email', 
     {!error && !!hint && <Text style={styles.hint}>{hint}</Text>}
   </View>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   field: { gap: 8 },
   label: { fontFamily: fonts.medium, fontSize: 13, color: colors.textSecondary },
   border: { padding: 1.5, borderRadius: 22, backgroundColor: '#F0F2F3', backgroundImage: 'linear-gradient(125deg, #FFFFFF, rgba(255,255,255,0) 60%, #FFFFFF)', boxShadow: '3px 5px 14px rgba(116,129,139,0.1)' },

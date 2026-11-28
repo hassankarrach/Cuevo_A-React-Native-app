@@ -1,16 +1,18 @@
+import { useAppColors, type AppColors } from '../../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { getMockAccount } from '../../../data/mockAccounts';
 import { type Playlist } from '../../../data/mockPlaylists';
-import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 import PlaylistCover from './PlaylistCover';
 
 const avatarColors = ['#FFE1CD', '#E9E3D9', '#F6DFA5'];
 
 export default function PlaylistCard({ playlist: source }: { playlist: Playlist }) {
+  const colors = useAppColors();
+  const styles = makeStyles(colors);
   const playlist = {
     ...source,
     creator: source.creatorId === 'self' ? 'You' : getMockAccount(source.creatorId)?.displayName ?? 'Creator',
@@ -44,16 +46,16 @@ export default function PlaylistCard({ playlist: source }: { playlist: Playlist 
   );
 }
 
-const styles = StyleSheet.create({
-  card: { minHeight: 80, padding: 4, gap: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EEEAE4' },
+const makeStyles = (colors: AppColors) => StyleSheet.create({
+  card: { minHeight: 80, padding: 4, gap: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   details: { flex: 1, minWidth: 0, gap: 4, paddingRight: 30 },
   name: { fontFamily: fonts.semibold, fontSize: 14, lineHeight: 19, color: colors.text },
   metadata: { fontFamily: fonts.regular, fontSize: 11, lineHeight: 16, color: colors.textSecondary },
   footer: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginTop: 3 },
   avatars: { flexDirection: 'row', alignItems: 'center' },
-  avatar: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   overlap: { marginLeft: -6 },
-  remaining: { minWidth: 26, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#FFFFFF', paddingHorizontal: 4, backgroundColor: '#F1EEEA', alignItems: 'center', justifyContent: 'center' },
+  remaining: { minWidth: 26, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.surface, paddingHorizontal: 4, backgroundColor: colors.mutedSurface, alignItems: 'center', justifyContent: 'center' },
   remainingText: { fontFamily: fonts.semibold, fontSize: 9, color: colors.textSecondary },
   visibility: { position: 'absolute', top: 10, right: 12 },
 });

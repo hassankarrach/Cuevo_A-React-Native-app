@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
+import { useAppColors } from '../../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -8,6 +10,9 @@ import type { Vote } from '../../../state/roomQueue';
 
 // Local interaction preview; server membership and vote totals will be wired later.
 export default function QueueVote({ score, song, vote, onVote, disabled = false }: { score: number; song: string; vote: Vote; onVote: (vote: Vote) => void; disabled?: boolean }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   return (
     <View style={styles.container}>
       <Pressable disabled={disabled} accessibilityRole="button" accessibilityLabel={`Upvote ${song}`} accessibilityState={{ disabled, selected: vote === 1 }}
@@ -23,7 +28,7 @@ export default function QueueVote({ score, song, vote, onVote, disabled = false 
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { width: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22, backgroundColor: '#FFF6EE', borderWidth: 1, borderColor: '#F1E5D9', paddingVertical: 2 },
   arrow: { width: 44, height: 30, alignItems: 'center', justifyContent: 'center' },
   pressed: { opacity: 0.55 },

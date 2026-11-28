@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, useAnimatedValue, View } from 'react-native';
@@ -6,6 +7,8 @@ export type RoomGenre = 'disco' | 'rnb' | 'pop';
 const labelColors: Record<RoomGenre, string> = { disco: '#FF4D24', rnb: '#797FBD', pop: '#E9AD47' };
 
 export default function RoomVinyl({ genre }: { genre: RoomGenre }) {
+  const styles = useThemedStyles(baseStyles);
+
   const rotation = useAnimatedValue(0);
   const [reduceMotion, setReduceMotion] = useState(true);
 
@@ -42,7 +45,7 @@ export default function RoomVinyl({ genre }: { genre: RoomGenre }) {
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   record: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#191919', borderWidth: 1, borderColor: '#343434', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   groove: { position: 'absolute', borderWidth: 0.5, borderColor: '#404040' },
   sheen: { ...StyleSheet.absoluteFill, backgroundImage: 'linear-gradient(125deg, rgba(255,255,255,0) 15%, rgba(255,255,255,0.22) 30%, rgba(255,255,255,0) 43%, rgba(255,255,255,0) 66%, rgba(255,255,255,0.12) 80%, rgba(255,255,255,0) 95%)' },

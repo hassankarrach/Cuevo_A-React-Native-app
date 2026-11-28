@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../theme/useThemedStyles';
+import { useAppColors } from '../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -9,6 +11,9 @@ import SearchPickerModal from './SearchPickerModal';
 export default function SongPickerModal({ visible, onClose, songIds, onAdd, title = 'Add songs' }: {
   visible: boolean; onClose: () => void; songIds: string[]; onAdd: (id: string) => void; title?: string;
 }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   return <SearchPickerModal visible={visible} onClose={onClose} title={title} placeholder="Search songs or artists">
     {query => {
       const results = songs.filter(song => `${song.title} ${song.artist} ${song.genres.join(' ')}`.toLocaleLowerCase().includes(query));
@@ -30,7 +35,7 @@ export default function SongPickerModal({ visible, onClose, songIds, onAdd, titl
     }}
   </SearchPickerModal>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
   songLink: { flex: 1, minWidth: 0, minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 12 },
   cover: { width: 46, height: 46, borderRadius: 11 },

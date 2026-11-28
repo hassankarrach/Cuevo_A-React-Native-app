@@ -1,9 +1,12 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, StyleSheet, useAnimatedValue } from 'react-native';
 
 export default function LiveIndicator() {
+  const styles = useThemedStyles(baseStyles);
+
   const pulse = useAnimatedValue(0);
   const [reduceMotion, setReduceMotion] = useState(true);
 
@@ -37,4 +40,4 @@ export default function LiveIndicator() {
   );
 }
 
-const styles = StyleSheet.create({ icon: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' } });
+const baseStyles = StyleSheet.create({ icon: { width: 26, height: 26, alignItems: 'center', justifyContent: 'center' } });

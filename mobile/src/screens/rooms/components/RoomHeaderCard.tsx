@@ -1,10 +1,11 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
+import { useAppColors } from '../../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { getSong } from '../../../data/songs';
 import { playbackDuration, queueSongId, rankedTracks, type Playback } from '../../../state/roomQueue';
-import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 import RoomRecord from './RoomRecord';
 import RoomHeaderBackground from './RoomHeaderBackground';
@@ -14,6 +15,9 @@ const time = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.flo
 
 type Props = { room: RoomHeaderDetails; playback: Playback; isHost: boolean; onToggle: () => void; onNext: () => void; onSeek: (seconds: number) => void };
 export default function RoomHeaderCard({ room, playback, isHost, onToggle, onNext, onSeek }: Props) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const [progressWidth, setProgressWidth] = useState(0);
   const track = playback.tracks.find(item => item.id === playback.currentId) ?? rankedTracks(playback)[0];
   const songId = track ? queueSongId(track) : undefined;
@@ -50,7 +54,7 @@ export default function RoomHeaderCard({ room, playback, isHost, onToggle, onNex
     <View style={styles.times}><Text style={styles.time}>{time(elapsed)}</Text><Text style={styles.time}>{time(duration)}</Text></View>
   </View>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   card: { marginLeft: 6, marginRight: 18, marginTop: 20, padding: 18, borderRadius: 26, borderWidth: 1, borderColor: '#EEEAE4', backgroundColor: '#FFFFFF' },
   roomMeta: { fontFamily: fonts.regular, fontSize: 10, lineHeight: 16, color: '#FFFFFF', marginTop: 3 },
   nowPlaying: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, marginBottom: 8 },

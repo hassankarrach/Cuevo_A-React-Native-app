@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -10,6 +12,9 @@ import UtilityPage from '../settings/UtilityPage';
 import PaymentMethodList from './PaymentMethodList';
 
 export default function SubscribeScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const { selectedMethod } = useBilling();
   const [error, setError] = useState('');
   return <UtilityPage title="Review subscription">
@@ -40,7 +45,7 @@ export default function SubscribeScreen() {
     }} /> : <PrimaryButton label="Add payment method" onPress={() => router.push({ pathname: '/payment', params: { from: 'subscription' } })} />}
   </UtilityPage>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   hero: { alignItems: 'center', borderRadius: 26, padding: 24, backgroundColor: '#FFF0E4', borderWidth: 1, borderColor: '#FFE0CA', gap: 9 },
   sparkle: { width: 62, height: 62, alignItems: 'center', justifyContent: 'center', borderRadius: 21, backgroundColor: '#FFFFFF', marginBottom: 7 },
   eyebrow: { fontFamily: fonts.semibold, fontSize: 9, letterSpacing: 1.4, color: '#9A6147' },

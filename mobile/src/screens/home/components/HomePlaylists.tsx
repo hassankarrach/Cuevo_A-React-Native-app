@@ -1,12 +1,14 @@
+import { useAppColors, type AppColors } from '../../../theme/useAppColors';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 import { usePlaylists } from '../../../state/PlaylistsContext';
 import PlaylistCard from '../../playlists/components/PlaylistCard';
 
 export default function HomePlaylists() {
+  const colors = useAppColors();
+  const styles = makeStyles(colors);
   const { playlists } = usePlaylists();
   return (
     <View style={styles.section}>
@@ -28,7 +30,7 @@ export default function HomePlaylists() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   section: { marginTop: 24, gap: 8 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: fonts.semibold, fontSize: 21, lineHeight: 28, color: colors.text },

@@ -1,8 +1,11 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import { useSimulatedSearch } from '../../hooks/useSimulatedSearch';
 import { RoomGridSkeleton } from '../../components/skeletons/ListSkeletons';
 import ModalSurface from '../../components/ModalSurface';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StatusBar } from 'expo-status-bar';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +23,9 @@ const sortOptions: { value: RoomSort; label: string }[] = [
 ];
 
 export default function RoomsScreen() {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   const { query, changeQuery, loading } = useSimulatedSearch();
   const [sort, setSort] = useState<RoomSort>('default');
@@ -30,13 +36,16 @@ export default function RoomsScreen() {
   const hasFilters = sort !== 'default' || genre !== 'all';
   const [filterOpen, setFilterOpen] = useState(false);
   const closeFilters = () => { setSortOpen(false); setFilterOpen(false); };
-  return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
-    <StatusBar style="dark" />
-    <Text accessibilityRole="header" style={styles.title}>Rooms</Text>
+  return <SafeAreaView edges={['left', 'right']} style={styles.screen}>
+    <StatusBar style={colors.dark ? 'light' : 'dark'} />
+    <View style={styles.titleRow}>
+      <Text accessibilityRole="header" style={styles.title}>Rooms</Text>
+      <Pressable onPress={() => router.push('/nearby')} accessibilityRole="button" accessibilityLabel="Find nearby rooms" style={styles.nearbyButton}><Ionicons name="bluetooth" size={18} color={colors.primary} /><Text style={styles.nearbyLabel}>Nearby</Text></Pressable>
+    </View>
     <View style={styles.searchRow}>
       <View style={styles.search}>
         <Ionicons name="search" size={20} color={colors.textSecondary} accessible={false} />
-        <TextInput value={query} onChangeText={changeQuery} placeholder="Search rooms…" accessibilityLabel="Search rooms" placeholderTextColor="#A19892" autoCorrect={false} autoCapitalize="none" returnKeyType="search" style={styles.input} selectionColor={colors.primary} />
+        <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={query} onChangeText={changeQuery} placeholder="Search rooms…" accessibilityLabel="Search rooms" placeholderTextColor={colors.textSecondary} autoCorrect={false} autoCapitalize="none" returnKeyType="search" style={styles.input} selectionColor={colors.primary} />
         {!!query && <Pressable onPress={() => changeQuery('')} accessibilityRole="button" accessibilityLabel="Clear search" style={styles.clear}><Ionicons name="close-circle" size={20} color={colors.textSecondary} /></Pressable>}
       </View>
       <Pressable onPress={() => { Keyboard.dismiss(); setFilterOpen(true); }} accessibilityRole="button" accessibilityLabel={`Filter rooms, ${sortOptions.find(item => item.value === sort)?.label}, ${genre === 'all' ? 'All genres' : genre}`} style={[styles.filterButton, styles.filterOutline]}>
@@ -80,9 +89,12 @@ export default function RoomsScreen() {
     </Modal>
   </SafeAreaView>;
 }
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FFFCF8', paddingHorizontal: 20, paddingTop: 20 },
+const baseStyles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#FFFCF8', paddingHorizontal: 20, paddingTop: 12 },
   title: { fontFamily: fonts.semibold, fontSize: 31, color: colors.text },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  nearbyButton: { minHeight: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: '#FFECE0', flexDirection: 'row', alignItems: 'center', gap: 5 },
+  nearbyLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.primary },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 20 },
   search: { flex: 1, minWidth: 0, minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 9, paddingLeft: 14, borderRadius: 17, backgroundColor: '#F1EEEA' },
   input: { flex: 1, minWidth: 0, minHeight: 52, paddingVertical: 12, fontFamily: fonts.input, letterSpacing: 0, fontSize: 15, color: colors.text },

@@ -1,7 +1,9 @@
+import { useAppColors, type AppColors } from '../../theme/useAppColors';
 import { useEffect, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, AppState, StyleSheet, View, type ViewStyle } from 'react-native';
 
 function Bone({ style }: { style?: ViewStyle }) {
+  const styles = makeStyles(useAppColors());
   return <View style={[styles.bone, style]} />;
 }
 
@@ -32,6 +34,7 @@ export function SkeletonPulse({ children, label = 'Loading home' }: { children: 
 }
 
 export function RoomCardSkeleton({ grid = false }: { grid?: boolean }) {
+  const styles = makeStyles(useAppColors());
   return <View style={[styles.room, grid && { width: '48%' }]}>
     <View style={styles.roomBanner}><Bone style={{ width: 100, height: 16 }} /></View>
     <View style={styles.roomDetails}>
@@ -42,6 +45,7 @@ export function RoomCardSkeleton({ grid = false }: { grid?: boolean }) {
 }
 
 export function PlaylistCardSkeleton() {
+  const styles = makeStyles(useAppColors());
   return <View style={styles.playlist}>
     <Bone style={{ width: 76, height: 76, borderRadius: 14 }} />
     <View style={styles.playlistCopy}>
@@ -53,23 +57,24 @@ export function PlaylistCardSkeleton() {
 }
 
 export function SearchResultSkeleton() {
+  const styles = makeStyles(useAppColors());
   return <View style={styles.searchResult}>
     <View><Bone style={{ width: 46, height: 46, borderRadius: 9 }} /><Bone style={styles.searchTypeBadge} /></View>
     <View style={styles.searchCopy}><Bone style={{ width: '65%', height: 14 }} /><Bone style={{ width: '42%', height: 11 }} /></View>
   </View>;
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   searchResult: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 6 },
   searchCopy: { flex: 1, gap: 7 },
-  searchTypeBadge: { position: 'absolute', right: -4, bottom: -4, width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#FFFCF8' },
-  bone: { backgroundColor: '#DED8D1', borderRadius: 6 },
-  room: { width: 164, height: 164, padding: 2, borderRadius: 26, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EEEAE4' },
-  roomBanner: { height: 57, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: '#EEE9E3', alignItems: 'center', justifyContent: 'center' },
+  searchTypeBadge: { position: 'absolute', right: -4, bottom: -4, width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: colors.canvas },
+  bone: { backgroundColor: colors.skeleton, borderRadius: 6 },
+  room: { width: 164, height: 164, padding: 2, borderRadius: 26, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  roomBanner: { height: 57, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.skeletonBanner, alignItems: 'center', justifyContent: 'center' },
   roomDetails: { paddingHorizontal: 8, paddingTop: 9, gap: 13 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   roomCopy: { flex: 1, gap: 7 },
   listeners: { flexDirection: 'row', alignItems: 'center' },
-  playlist: { minHeight: 86, padding: 4, gap: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#EEEAE4' },
+  playlist: { minHeight: 86, padding: 4, gap: 12, flexDirection: 'row', alignItems: 'center', borderRadius: 20, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   playlistCopy: { flex: 1, minWidth: 0, paddingRight: 30, gap: 8 },
 });

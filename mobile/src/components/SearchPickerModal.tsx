@@ -1,10 +1,12 @@
+import { useThemedStyles } from '../theme/useThemedStyles';
+import { useAppColors } from '../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme/colors';
 import { fonts } from '../theme/fonts';
-import AppToast from './AppToast';
+import { ToastViewport } from './AppToast';
 import ModalSurface from './ModalSurface';
 
 type Props = {
@@ -21,9 +23,13 @@ export default function SearchPickerModal(props: Props) {
 }
 
 function Picker({ onClose, title, placeholder, children }: Props) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState('');
   return <Modal transparent animationType="fade" onRequestClose={onClose}>
+    <ToastViewport>
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={[styles.overlay, { paddingTop: Math.max(insets.top, 24), paddingBottom: Math.max(insets.bottom, 24) }]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel={`Close ${title.toLowerCase()}`} />
       <View style={styles.sheet} accessibilityViewIsModal onAccessibilityEscape={onClose}>
@@ -35,7 +41,7 @@ function Picker({ onClose, title, placeholder, children }: Props) {
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
             <Ionicons name="search" size={20} color={colors.textSecondary} accessible={false} />
-            <TextInput value={query} onChangeText={setQuery} placeholder={placeholder} accessibilityLabel={placeholder} placeholderTextColor={colors.textSecondary} autoCorrect={false} autoCapitalize="none" returnKeyType="search" selectionColor={colors.primary} style={styles.input} />
+            <TextInput keyboardAppearance={colors.dark ? 'dark' : 'light'} value={query} onChangeText={setQuery} placeholder={placeholder} accessibilityLabel={placeholder} placeholderTextColor={colors.textSecondary} autoCorrect={false} autoCapitalize="none" returnKeyType="search" selectionColor={colors.primary} style={styles.input} />
             {!!query && <Pressable onPress={() => setQuery('')} accessibilityRole="button" accessibilityLabel="Clear search" style={styles.clear}><Ionicons name="close-circle" size={19} color={colors.textSecondary} /></Pressable>}
           </View>
         </View>
@@ -43,12 +49,12 @@ function Picker({ onClose, title, placeholder, children }: Props) {
           {query.trim() ? children(query.trim().toLocaleLowerCase()) : <Text style={styles.hint}>Type to search.</Text>}
         </ScrollView>
       </View>
-      <AppToast />
     </KeyboardAvoidingView>
+    </ToastViewport>
   </Modal>;
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'center', paddingHorizontal: 20, backgroundColor: 'rgba(35,27,24,0.3)' },
   sheet: { height: '80%', maxHeight: '100%', width: '100%', maxWidth: 440, alignSelf: 'center', borderRadius: 28, padding: 20 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },

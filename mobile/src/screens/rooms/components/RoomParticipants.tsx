@@ -1,3 +1,4 @@
+import { useThemedStyles } from '../../../theme/useThemedStyles';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +8,9 @@ import { useLocalProfile } from '../../../state/ProfileContext';
 import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 
-export default function RoomParticipants({ participantIds, hostId }: { participantIds: string[]; hostId?: string }) {
+export default function RoomParticipants({ participantIds, hostId, hostLabel = 'room host and admin' }: { participantIds: string[]; hostId?: string; hostLabel?: string }) {
+  const styles = useThemedStyles(baseStyles);
+
   const { profile } = useLocalProfile();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroll}
@@ -18,7 +21,7 @@ export default function RoomParticipants({ participantIds, hostId }: { participa
         const participant = id === 'self' ? profile : account;
         const isHost = id === hostId;
         return (
-          <Pressable key={id} accessibilityRole="button" accessibilityLabel={`View ${participant.displayName}${id === 'self' ? ', your profile' : "'s profile"}${isHost ? ", room host and admin" : ""}`}
+          <Pressable key={id} accessibilityRole="button" accessibilityLabel={`View ${participant.displayName}${id === 'self' ? ', your profile' : "'s profile"}${isHost ? `, ${hostLabel}` : ""}`}
             onPress={() => router.push(id === 'self' ? '/profile' : { pathname: '/profile', params: { userId: id } })}
             style={styles.participant}>
             <View style={[styles.avatarFrame, { backgroundColor: account.avatarColor }, isHost && styles.hostAvatar]}>
@@ -35,7 +38,7 @@ export default function RoomParticipants({ participantIds, hostId }: { participa
   );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   scroll: { flex: 1 },
   row: { alignItems: 'center', gap: 3, paddingVertical: 8, paddingRight: 20 },
   participant: { width: 50, height: 50 },

@@ -1,21 +1,45 @@
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import GoogleAuthButton from '../../../components/GoogleAuthButton';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import PrimaryButton from '../../../components/PrimaryButton';
 import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 import LoginFields from './LoginFields';
+import { useEffect, useRef, useState } from 'react';
+import { useAuth } from '../../../state/AuthContext';
+import { registrationError } from '../../../api/registration';
+import { emailError, passwordError } from '../../auth/authValidation';
 
-export default function LoginForm({ onSignUp, onForgotPassword }: { onSignUp: () => void; onForgotPassword: () => void }) {
+export default function LoginForm({ onSignUp, onForgotPassword, initialEmail = '' }: { onSignUp: () => void; onForgotPassword: () => void; initialEmail?: string }) {
+  const { login } = useAuth();
+  const [credentials, setCredentials] = useState({ email: initialEmail, password: '' });
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const pending = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  async function submit() {
+    if (pending.current) return;
+    const invalid = emailError(credentials.email) || passwordError(credentials.password);
+    setError(invalid);
+    if (invalid) return;
+    pending.current = true;
+    setSubmitting(true);
+    try { await login(credentials.email, credentials.password); }
+    catch (error) { if (mounted.current) setError(error instanceof Error && !(error.name === 'ApiError') ? error.message : registrationError(error)); }
+    finally { pending.current = false; if (mounted.current) setSubmitting(false); }
+  }
   return (
     <View style={styles.form}>
-      <View>
-        <LoginFields />
-        <Pressable onPress={onForgotPassword} accessibilityRole="button" style={styles.forgotButton}>
+      <View pointerEvents={submitting ? 'none' : 'auto'}>
+        <LoginFields initialEmail={initialEmail} onChange={value => { setCredentials(value); setError(''); }} />
+        <Pressable disabled={submitting} onPress={onForgotPassword} accessibilityRole="button" style={styles.forgotButton}>
           <Text style={styles.forgotLabel}>Forgot password?</Text>
         </Pressable>
       </View>
 
-      <PrimaryButton label="Log in" disabled />
+      {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+      <PrimaryButton label={submitting ? 'Signing in…' : 'Log in'} disabled={submitting} onPress={submit} />
 
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
@@ -23,19 +47,10 @@ export default function LoginForm({ onSignUp, onForgotPassword }: { onSignUp: ()
         <View style={styles.dividerLine} />
       </View>
 
-      {/* Auth actions remain visual previews until services are connected. */}
-      <Pressable disabled accessibilityRole="button" accessibilityLabel="Sign in with Google" style={styles.googleButton}>
-        <Image
-          source={require('../../../../assets/brand/google-g.png')}
-          resizeMode="contain"
-          accessible={false}
-          style={styles.googleImage}
-        />
-        <Text style={styles.googleLabel}>Sign in with Google</Text>
-      </Pressable>
+      <GoogleAuthButton label="Sign in with Google" disabled={submitting} onError={setError} onBusy={busy => { pending.current = busy; setSubmitting(busy); }} />
 
 
-      <Pressable onPress={onSignUp} accessibilityRole="button" style={styles.signupButton}>
+      <Pressable disabled={submitting} onPress={onSignUp} accessibilityRole="button" style={styles.signupButton}>
         <Text style={styles.signupText}>
           New to Cuevo? <Text style={styles.signupLabel}>Create an account</Text>
         </Text>
@@ -45,6 +60,7 @@ export default function LoginForm({ onSignUp, onForgotPassword }: { onSignUp: ()
 }
 
 const styles = StyleSheet.create({
+  error: { fontFamily: fonts.regular, fontSize: 12, color: '#C5392A', lineHeight: 18 },
   form: { paddingHorizontal: 12, paddingTop: 24, paddingBottom: 20, gap: 20 },
   googleButton: {
     minHeight: 56,

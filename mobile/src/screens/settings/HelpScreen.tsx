@@ -1,6 +1,7 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
 import { Text, View } from 'react-native';
 import UtilityPage from './UtilityPage';
-import { settingsStyles as styles } from './settingsStyles';
+import { settingsStyles as baseStyles } from './settingsStyles';
 const topics = [
   ['About Cuevo', 'Choose what plays next and build playlists together. Cuevo combines cue/queue + vote.'],
   ['Join a room', 'Browse Rooms to open a public room, then choose Join. With an invitation, tap + and enter the six-character room code.'],
@@ -11,5 +12,7 @@ const topics = [
   ['Account and privacy', 'Open Settings to edit your profile, change your password and choose visibility for your bio, location and music preferences.'],
 ];
 export default function HelpScreen() {
+  const styles = useThemedStyles(baseStyles);
+
   return <UtilityPage title="Help & about">{topics.map(([title, body]) => <View key={title} style={[styles.card, styles.form]}><Text style={styles.heading}>{title}</Text><Text style={styles.note}>{body}</Text></View>)}</UtilityPage>;
 }

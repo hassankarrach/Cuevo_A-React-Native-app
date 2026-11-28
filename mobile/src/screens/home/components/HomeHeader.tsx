@@ -1,9 +1,9 @@
+import { useAppColors, type AppColors } from '../../../theme/useAppColors';
 import AccountBadges from '../../../components/AccountBadges';
 import { useLocalProfile } from '../../../state/ProfileContext';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 
-import { colors } from '../../../theme/colors';
 import { fonts } from '../../../theme/fonts';
 
 type HomeHeaderProps = {
@@ -27,6 +27,8 @@ export default function HomeHeader({
   unreadCount = 0,
   notificationsOpen = false,
 }: HomeHeaderProps) {
+  const colors = useAppColors();
+  const styles = makeStyles(colors);
   const { profile, accountStatus } = useLocalProfile();
   const photo = avatarSource ?? (profile.avatarUri ? { uri: profile.avatarUri } : require('../../../../assets/avatars/cuevo-mascot.png'));
   return (
@@ -55,7 +57,7 @@ export default function HomeHeader({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   avatar: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#FFF0E9' },
   greeting: { flex: 1, minWidth: 0, gap: 2 },
@@ -63,7 +65,7 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   name: { flexShrink: 1, fontFamily: fonts.semibold, fontSize: 19, lineHeight: 26, color: colors.text },
   headerActions: { flexDirection: 'row', gap: 6 },
-  notificationButton: { width: 44, height: 44, borderWidth: 1, borderColor: '#E2E2E2', alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
+  notificationButton: { width: 44, height: 44, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', borderRadius: 14 },
   notificationDot: { position: 'absolute', top: 9, right: 10, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary, borderWidth: 2, borderColor: '#FFFCF8' },
-  pressed: { backgroundColor: '#F3EEE9' },
+  pressed: { backgroundColor: colors.mutedSurface },
 });

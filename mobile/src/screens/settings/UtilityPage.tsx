@@ -1,3 +1,5 @@
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import { useAppColors } from '../../theme/useAppColors';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,16 +10,19 @@ import { colors } from '../../theme/colors';
 import { fonts } from '../../theme/fonts';
 
 export default function UtilityPage({ title, children }: { title: string; children: ReactNode }) {
+  const styles = useThemedStyles(baseStyles);
+  const colors = useAppColors();
+
   const insets = useSafeAreaInsets();
   return <SafeAreaView edges={['top', 'left', 'right']} style={styles.screen}>
-    <StatusBar style="dark" />
+    <StatusBar style={colors.dark ? 'light' : 'dark'} />
     <View style={styles.header}><Pressable onPress={() => router.canGoBack() ? router.back() : router.replace('/home')} accessibilityRole="button" accessibilityLabel="Back" style={styles.back}><Ionicons name="arrow-back" size={24} color={colors.text} /></Pressable><Text accessibilityRole="header" style={styles.title}>{title}</Text></View>
     <KeyboardAvoidingView style={styles.body} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, 20) + 24 }]}>{children}</ScrollView>
     </KeyboardAvoidingView>
   </SafeAreaView>;
 }
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#FFFCF8' },
   body: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
